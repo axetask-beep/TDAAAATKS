@@ -48,7 +48,7 @@ export const CommandPalette: React.FC<Props> = ({ open, onClose, onNavigate }) =
     { id: 'a-time', label: 'Mon temps', icon: <Clock className="w-3.5 h-3.5" />, run: go(() => onNavigate('time_tracking')) },
     { id: 'a-msg', label: 'Messages', icon: <MessageSquare className="w-3.5 h-3.5" />, run: go(() => onNavigate('messages')) },
     { id: 'a-set', label: user?.role === 'admin' ? 'Paramètres & équipe' : 'Paramètres', icon: <Settings className="w-3.5 h-3.5" />, run: go(() => onNavigate('settings')) },
-  ], [user?.role]);
+  ].filter(a => user?.role === 'admin' || (a.id !== 'a-cc' && a.id !== 'a-ana')), [user?.role]);
 
   const needle = q.trim().toLowerCase();
   const items: Item[] = [

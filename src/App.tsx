@@ -73,6 +73,10 @@ function MainAppLayout() {
     return <AuthView />;
   }
 
+  // Centre de contrôle + Analyses: global admins only; everyone else lands on "Mes tâches".
+  const isAdminOnlyView = currentView === 'command' || currentView === 'analytics';
+  const view: NavigationTab = isAdminOnlyView && user.role !== 'admin' ? 'dashboard' : currentView;
+
   return (
     <div className="bg-[#090D16] text-slate-100 selection:bg-[#2563EB]/30 selection:text-[#93C5FD] font-mono">
       {/* Navbar — truly fixed, always at top */}
@@ -88,7 +92,7 @@ function MainAppLayout() {
 
       {/* Sidebar — fixed, never scrolls */}
       <Sidebar
-        currentView={currentView}
+        currentView={view}
         onNavigate={(view) => {
           setCurrentView(view);
           setIsMobileMenuOpen(false);
@@ -99,9 +103,9 @@ function MainAppLayout() {
 
       {/* Main content — body is the scroll container (fixes fixed positioning on mobile) */}
       <main className="min-h-screen bg-[#090D16] pt-14 md:pl-60 relative">
-        {(currentView === 'command' || currentView === 'analytics') && (
+        {(view === 'command' || view === 'analytics') && (
           <CommandCenter
-            tab={currentView === 'command' ? 'pilotage' : 'analyses'}
+            tab={view === 'command' ? 'pilotage' : 'analyses'}
             onTabChange={(t) => setCurrentView(t === 'pilotage' ? 'command' : 'analytics')}
             onOpenProject={(projectId) => {
               setCurrentProjectId(projectId);
@@ -110,11 +114,11 @@ function MainAppLayout() {
           />
         )}
 
-        {currentView === 'progress' && <ProgressView />}
+        {view === 'progress' && <ProgressView />}
 
-        {currentView === 'dashboard' && <GlobalDashboard />}
+        {view === 'dashboard' && <GlobalDashboard />}
 
-        {currentView === 'workspaces' && (
+        {view === 'workspaces' && (
           <WorkspacesList
             onSelectWorkspace={(wsId) => {
               setCurrentView('workspace_detail');
@@ -122,7 +126,7 @@ function MainAppLayout() {
           />
         )}
 
-        {currentView === 'workspace_detail' && (
+        {view === 'workspace_detail' && (
           <WorkspaceView
             onSelectProject={(prjId) => {
               setCurrentProjectId(prjId);
@@ -133,21 +137,21 @@ function MainAppLayout() {
           />
         )}
 
-        {currentView === 'project_detail' && (
+        {view === 'project_detail' && (
           <ProjectView
             onBackToWorkspace={() => setCurrentView('workspace_detail')}
           />
         )}
 
-        {currentView === 'time_tracking' && <TimeTrackingView />}
+        {view === 'time_tracking' && <TimeTrackingView />}
 
-        {currentView === 'messages' && <MessagesView />}
+        {view === 'messages' && <MessagesView />}
 
-        {currentView === 'announcements' && <AnnouncementsView />}
+        {view === 'announcements' && <AnnouncementsView />}
 
-        {currentView === 'activity' && user?.role === 'admin' && <ActivityLogView />}
+        {view === 'activity' && user?.role === 'admin' && <ActivityLogView />}
 
-        {currentView === 'settings' && <SettingsView />}
+        {view === 'settings' && <SettingsView />}
       </main>
 
       {/* Modals & Overlays */}
