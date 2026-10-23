@@ -1,0 +1,8 @@
+{
+  "name": "Axe Task",
+  "description": "Plateforme full-stack de gestion de tâches et productivité multi-ventures pour équipes : Kanban drag & drop, suivi du temps, export CSV, isolation des espaces de travail et contrôle d'accès.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

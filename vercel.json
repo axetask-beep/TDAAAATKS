@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "framework": "vite",
+  "buildCommand": "vite build && esbuild src/server/serverless.ts --bundle --platform=node --format=esm --target=node20 --packages=external --outfile=api/index.js",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/due-reminders",
+      "schedule": "0 8 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

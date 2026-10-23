@@ -1,0 +1,182 @@
+======================================================
+  AXETASKS — GUIDE DE MISE EN PRODUCTION
+======================================================
+
+ÉTAT ACTUEL DU PROJET (Dev local)
+----------------------------------
+- BDD active   : Fichier JSON local (server/db.ts → data/db.json)
+- Serveur      : http://localhost:3000
+- Lancement    : npm run dev
+
+
+======================================================
+  ÉTAPE 1 — PRÉPARER LES VARIABLES D'ENVIRONNEMENT
+======================================================
+
+Créer un fichier .env à la racine du projet (ne jamais
+committer ce fichier dans Git — vérifiez le .gitignore).
+
+Contenu minimal requis :
+
+  GEMINI_API_KEY=<votre_clé_Google_AI_Studio>
+  APP_URL=https://votre-domaine.com
+  JWT_SECRET=<généré_avec_la_commande_ci-dessous>
+
+  SQL_HOST=127.0.0.1          ← ou l'adresse de votre serveur DB
+  SQL_USER=postgres
+  SQL_PASSWORD=<mot_de_passe_fort>
+  SQL_DB_NAME=axetask
+
+Générer un JWT_SECRET fort (à faire dans le terminal) :
+  node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+
+
+======================================================
+  ÉTAPE 2 — CONFIGURER POSTGRESQL
+======================================================
+
+PostgreSQL 16 est déjà installé sur cette machine.
+
+2a. Créer la base de données (une seule fois) :
+
+  sudo -u postgres psql
+  > CREATE DATABASE axetask;
+  > ALTER USER postgres PASSWORD 'votre_mot_de_passe';
+  > \q
+
+2b. Pousser le schéma Drizzle (crée toutes les tables) :
+
+  npx drizzle-kit push --config=drizzle.config.ts
+
+  ✅ Déjà fait le 02/09/2026 — à relancer si le schéma change.
+
+
+======================================================
+  ÉTAPE 3 — REBRANCHER server.ts SUR POSTGRESQL
+======================================================
+
+En production, remplacer les 3 appels `localDb` par `db` (PostgreSQL)
+dans le fichier server.ts :
+
+  FICHIER : server.ts
+
+  3a. authMiddleware (~ligne 56) :
+      AVANT : const dbUser = localDb.getUserById(payload.id);
+      APRÈS : const dbUser = await db.getUserById(payload.id);
+
+  3b. Route /api/auth/login (~ligne 109) :
+      AVANT : const user = localDb.getUserByEmail(cleanEmail);
+              if (!user || !localDb.verifyPassword(user, password)) {
+      APRÈS : const user = await db.getUserByEmail(cleanEmail);
+              if (!user || user.password_hash !== db.hashPassword(password)) {
+
+  3c. Route /api/auth/demo-users (~ligne 93) :
+      AVANT : const users = localDb.getAllUsers();
+      APRÈS : const users = await db.getAllUsers();
+
+  3d. Startup ensureRequiredUsers (~ligne 797) :
+      AVANT : localDb.ensureRequiredUsers();
+      APRÈS : await db.ensureRequiredUsers();
+      (la fonction existe déjà dans src/db/queries.ts)
+
+
+======================================================
+  ÉTAPE 4 — BUILDER LE PROJET
+======================================================
+
+  npm run build
+
+  Génère :
+    - dist/          → frontend compilé (React/Vite)
+    - dist/server.cjs → backend compilé (Express)
+
+
+======================================================
+  ÉTAPE 5 — LANCER EN PRODUCTION
+======================================================
+
+  Option A — Lancement simple :
+    NODE_ENV=production npm start
+
+  Option B — Avec PM2 (recommandé, survie aux redémarrages) :
+    npm install -g pm2
+    pm2 start dist/server.cjs --name axetasks
+    pm2 save
+    pm2 startup
+
+
+======================================================
+  ÉTAPE 6 — NGINX (REVERSE PROXY, RECOMMANDÉ)
+======================================================
+
+Installer Nginx et créer la config :
+  sudo apt install nginx
+
+  /etc/nginx/sites-available/axetasks :
+
+    server {
+        listen 80;
+        server_name votre-domaine.com;
+
+        location / {
+            proxy_pass http://localhost:3000;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+        }
+    }
+
+  sudo ln -s /etc/nginx/sites-available/axetasks /etc/nginx/sites-enabled/
+  sudo nginx -t && sudo systemctl reload nginx
+
+
+======================================================
+  ÉTAPE 7 — HTTPS (CERTIFICAT SSL)
+======================================================
+
+  sudo apt install certbot python3-certbot-nginx
+  sudo certbot --nginx -d votre-domaine.com
+
+  Le certificat se renouvelle automatiquement.
+
+
+======================================================
+  CHECKLIST FINALE AVANT MISE EN LIGNE
+======================================================
+
+  [ ] .env rempli avec de vraies valeurs (JWT_SECRET fort)
+  [ ] .env absent du dépôt Git (dans .gitignore)
+  [ ] npx drizzle-kit push exécuté (tables créées)
+  [ ] server.ts rebasculé sur db.* (étape 3)
+  [ ] npm run build réussi sans erreur
+  [ ] PostgreSQL accessible depuis le serveur
+  [ ] Nginx configuré + HTTPS activé
+  [ ] pm2 configuré pour démarrage auto au boot
+
+
+======================================================
+  HÉBERGEURS POSTGRESQL GRATUITS (SI PAS DE VPS)
+======================================================
+
+  - Supabase  → https://supabase.com   (500 MB gratuit)
+  - Neon      → https://neon.tech      (3 GB gratuit)
+  - Railway   → https://railway.app    (~5$/mois)
+
+  Avec ces services, récupérez la connection string et
+  remplissez SQL_HOST, SQL_USER, SQL_PASSWORD, SQL_DB_NAME.
+
+
+======================================================
+  COMMANDES UTILES AU QUOTIDIEN
+======================================================
+
+  npm run dev          → Lancer en développement
+  npm run build        → Compiler pour la production
+  npm start            → Lancer le build de production
+  npx drizzle-kit push → Mettre à jour les tables DB
+  pm2 logs axetasks    → Voir les logs en production
+  pm2 restart axetasks → Redémarrer le serveur
+
+======================================================
