@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { visiblePoll } from '../../lib/visiblePoll';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
 import { api } from '../../lib/api';
@@ -71,17 +72,14 @@ export const MessagesView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadConversations();
-    const interval = setInterval(loadConversations, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    return visiblePoll(loadConversations, POLL_INTERVAL_MS);
   }, [loadConversations]);
 
   useEffect(() => {
     setReplyingTo(null);
     if (!activeConversationId) return;
-    loadMessages(activeConversationId);
-    const interval = setInterval(() => loadMessages(activeConversationId, true), POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    let first = true; // first load shows the spinner, later polls are silent
+    return visiblePoll(() => { loadMessages(activeConversationId, !first); first = false; }, POLL_INTERVAL_MS);
   }, [activeConversationId, loadMessages]);
 
   useEffect(() => {

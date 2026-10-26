@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { visiblePoll } from '../../lib/visiblePoll';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
@@ -89,9 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
         })
         .catch(() => {});
     };
-    loadUnread();
-    const interval = setInterval(loadUnread, UNREAD_POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    return visiblePoll(loadUnread, UNREAD_POLL_INTERVAL_MS);
   }, []);
 
   useEffect(() => {

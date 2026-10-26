@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { visiblePoll } from '../../lib/visiblePoll';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useToast } from '../../context/ToastContext';
 import { api } from '../../lib/api';
@@ -174,9 +175,7 @@ export const NotificationsBell: React.FC<NotificationsBellProps> = ({ onOpenWork
   }, []);
 
   useEffect(() => {
-    pollNotifications();
-    const interval = setInterval(pollNotifications, 20000);
-    return () => clearInterval(interval);
+    return visiblePoll(pollNotifications, 20000);
   }, [pollNotifications]);
 
   useEffect(() => {
