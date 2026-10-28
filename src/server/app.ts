@@ -771,8 +771,8 @@ export function createApp() {
       }
       const { name, description, status, start_at, end_at, stopped_at } = req.body;
       const link = normalizeLink(req.body.link);
-      if ((start_at !== undefined || end_at !== undefined || stopped_at !== undefined || link !== undefined) && !(await db.userIsWorkspaceAdmin(req.user!.id, project.workspace_id, isGlobalAdmin))) {
-        return res.status(403).json({ error: "Seul un administrateur du workspace peut modifier les dates, le chrono ou le lien d'un projet." });
+      if ((start_at !== undefined || end_at !== undefined || stopped_at !== undefined) && !(await db.userIsWorkspaceAdmin(req.user!.id, project.workspace_id, isGlobalAdmin))) {
+        return res.status(403).json({ error: "Seul un administrateur du workspace peut modifier les dates ou le chrono d'un projet." });
       }
       res.locals.audit = {
         label: project.name,

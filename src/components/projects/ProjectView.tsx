@@ -262,9 +262,8 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ onBackToWorkspace }) =
           onClose={() => setIsEditProjectOpen(false)}
         />
       )}
-      {/* Project link — set by an admin at any time, shown front and center */}
-      {(currentProject.link || isWorkspaceAdmin) && (
-        <div className="flex justify-center">
+      {/* Project link — any workspace member (admin or dev) can set/edit it */}
+      <div className="flex justify-center">
           {isEditingLink ? (
             <form
               onSubmit={e => { e.preventDefault(); handleSaveLink(); }}
@@ -293,15 +292,13 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ onBackToWorkspace }) =
                 <ExternalLink className="w-4 h-4 shrink-0" />
                 <span className="truncate">{currentProject.link}</span>
               </a>
-              {isWorkspaceAdmin && (
-                <button
-                  onClick={() => { setLinkDraft(currentProject.link || ''); setIsEditingLink(true); }}
-                  title="Modifier le lien"
-                  className="p-2 rounded text-slate-400 hover:text-[#60A5FA] hover:bg-[#1E293B]"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <button
+                onClick={() => { setLinkDraft(currentProject.link || ''); setIsEditingLink(true); }}
+                title="Modifier le lien"
+                className="p-2 rounded text-slate-400 hover:text-[#60A5FA] hover:bg-[#1E293B]"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
             </div>
           ) : (
             <button
@@ -313,7 +310,6 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ onBackToWorkspace }) =
             </button>
           )}
         </div>
-      )}
 
       {/* Breadcrumb & Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1E293B] pb-4">
