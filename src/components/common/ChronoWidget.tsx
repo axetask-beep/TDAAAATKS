@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Clock, AlertTriangle, CheckCircle2, Square } from 'lucide-react';
 import { computeChronoState, formatDuration, CHRONO_LABELS } from '../../lib/chrono';
 
@@ -16,11 +16,15 @@ interface ChronoWidgetProps {
 export const ChronoWidget: React.FC<ChronoWidgetProps> = ({ startAt, endAt, completedAt, stoppedAt, size = 'md' }) => {
   const [now, setNow] = useState(() => new Date());
   const isFrozen = !!completedAt || !!stoppedAt;
+  const ref = useRef<HTMLDivElement>(null);
 
+  // Tick on the timer of the window we're rendered in: inside the always-on-top
+  // PiP window it keeps ticking even when the app tab is in the background.
   useEffect(() => {
     if (isFrozen) return;
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
+    const win = ref.current?.ownerDocument.defaultView || window;
+    const interval = win.setInterval(() => setNow(new Date()), 1000);
+    return () => win.clearInterval(interval);
   }, [isFrozen]);
 
   const state = computeChronoState(startAt, endAt, completedAt, now, stoppedAt);
@@ -44,6 +48,7 @@ export const ChronoWidget: React.FC<ChronoWidgetProps> = ({ startAt, endAt, comp
 
   return (
     <div
+      ref={ref}
       className={`inline-flex items-center rounded border font-bold ${colorClasses} ${sizeClasses}`}
       title={CHRONO_LABELS[state.status]}
     >
