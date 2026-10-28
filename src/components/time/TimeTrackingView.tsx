@@ -533,7 +533,7 @@ export const TimeTrackingView: React.FC = () => {
                             onClick={() => setSelectedTaskId(t.id)}
                             className="font-bold text-slate-100 hover:text-[#60A5FA] transition-colors text-left flex items-center gap-1 group"
                           >
-                            <span className="truncate max-w-[220px]">{t.title}</span>
+                            <span className="break-words">{t.title}</span>
                             <ArrowUpRight className="w-3 h-3 text-slate-500 group-hover:text-[#60A5FA]" />
                           </button>
                         </td>

@@ -291,25 +291,25 @@ export const GlobalDashboard: React.FC = () => {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       {/* Workspace badge */}
-                      <span className="max-w-[160px] inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-[#0B1120] text-slate-300 border border-[#1E293B]">
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-[#0B1120] text-slate-300 border border-[#1E293B]">
                         <div
                           className="w-1.5 h-1.5 rounded-full shrink-0"
                           style={{ backgroundColor: task.workspace?.color || '#2563EB' }}
                         />
-                        <span className="truncate min-w-0">{task.workspace?.name || 'Workspace'}</span>
+                        <span className="break-words min-w-0">{task.workspace?.name || 'Workspace'}</span>
                       </span>
 
                       {/* Project badge */}
-                      <span className="max-w-[160px] inline-flex items-center gap-1 text-[10px] font-medium text-slate-400">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400">
                         <FolderGit2 className="w-3 h-3 text-slate-500 shrink-0" />
-                        <span className="truncate min-w-0">{task.project?.name}</span>
+                        <span className="break-words min-w-0">{task.project?.name}</span>
                       </span>
 
                       {/* Tags */}
                       {task.tags?.map(t => (
                         <span
                           key={t.id}
-                          className="max-w-[140px] truncate text-[10px] px-1.5 py-0.2 rounded font-medium"
+                          className="break-words text-[10px] px-1.5 py-0.2 rounded font-medium"
                           style={{ backgroundColor: `${t.color}15`, color: t.color, border: `1px solid ${t.color}35` }}
                         >
                           {t.name}
@@ -318,7 +318,7 @@ export const GlobalDashboard: React.FC = () => {
                     </div>
 
                     {/* Title */}
-                    <h3 className={`text-xs font-semibold group-hover:text-[#60A5FA] transition-colors truncate ${
+                    <h3 className={`text-xs font-semibold group-hover:text-[#60A5FA] transition-colors break-words ${
                       task.status === 'termine' ? 'line-through text-slate-500' : 'text-slate-100'
                     }`}>
                       {task.title}

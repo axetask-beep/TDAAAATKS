@@ -271,7 +271,7 @@ const Challenges: React.FC<{ challenges: Challenge[]; scope: Scope; reload: () =
             <div key={c.id} className={`rounded border p-3 ${c.success ? 'border-emerald-800/60' : 'border-[#1E293B]'}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-slate-100 truncate">{c.title}</p>
+                  <p className="text-xs font-semibold text-slate-100 break-words">{c.title}</p>
                   <p className="text-[10px] text-slate-500">{wsName(c.workspace_id)} · {c.metric_label} · objectif {c.target}{c.unit === '%' ? ' %' : ` ${c.unit}`}</p>
                 </div>
                 <span className={`text-[9px] uppercase font-bold shrink-0 ${c.success ? 'text-emerald-400' : c.state === 'termine' ? 'text-slate-500' : 'text-amber-400'}`}>

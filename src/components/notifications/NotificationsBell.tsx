@@ -343,12 +343,12 @@ export const NotificationsBell: React.FC<NotificationsBellProps> = ({ onOpenWork
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6] shrink-0" />}
-                        <p className={`text-xs truncate ${!n.is_read ? 'font-bold text-slate-100' : 'font-medium text-slate-300'}`}>
+                        <p className={`text-xs break-words ${!n.is_read ? 'font-bold text-slate-100' : 'font-medium text-slate-300'}`}>
                           {n.title}
                         </p>
                       </div>
                       {n.message && (
-                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">{n.message}</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5 break-words">{n.message}</p>
                       )}
                       <p className="text-[10px] text-slate-500 mt-1">{formatRelativeTime(n.created_at)}</p>
                     </div>

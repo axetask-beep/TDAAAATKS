@@ -164,7 +164,7 @@ const Kpi: React.FC<KpiProps> = ({ label, value, hint, tone = 'text-slate-100', 
 const TaskRow: React.FC<{ t: ScopeTask; onOpen: (id: string) => void; projectName: (id: string) => string; userName: (id: string | null) => string; right?: React.ReactNode; reasons?: string[] }> = ({ t, onOpen, projectName, userName, right, reasons }) => (
   <button onClick={() => onOpen(t.id)} className="w-full text-left p-2.5 hover:bg-[#1E293B]/60 flex flex-col sm:flex-row sm:items-center gap-2 justify-between group">
     <div className="min-w-0">
-      <p className="text-xs font-semibold text-slate-100 truncate group-hover:text-[#93C5FD]">{t.title}</p>
+      <p className="text-xs font-semibold text-slate-100 break-words group-hover:text-[#93C5FD]">{t.title}</p>
       <p className="text-[10px] text-slate-500 truncate">{projectName(t.project_id)} · {userName(t.assignee_id)}{t.end_at ? ` · échéance ${fmtDate(t.end_at)}` : ''}</p>
       {reasons && <p className="text-[10px] text-[#93C5FD] mt-0.5">{reasons.join(' · ')}</p>}
     </div>
@@ -249,7 +249,7 @@ const Pilotage: React.FC<any> = ({ scope, tasks, health, now, dayStart, days, us
                       <span className={`text-[10px] font-bold uppercase tracking-wider ${c.urgency === 'critique' ? 'text-rose-400' : 'text-amber-400'}`}>{c.urgency === 'critique' ? 'Critique' : 'Haute'} · {c.problem}</span>
                       {c.due && <span className="text-[10px] text-slate-500">échéance {fmtDate(c.due)}</span>}
                     </div>
-                    <p className="text-xs font-semibold text-slate-100 truncate">{c.title}</p>
+                    <p className="text-xs font-semibold text-slate-100 break-words">{c.title}</p>
                     <p className="text-[11px] text-slate-400">{c.reason} · Responsable : {userName(c.ownerId)}</p>
                     <p className="text-[11px] text-[#93C5FD] mt-0.5">→ {c.action}</p>
                   </div>
@@ -339,7 +339,7 @@ const Pilotage: React.FC<any> = ({ scope, tasks, health, now, dayStart, days, us
               <tbody className="divide-y divide-[#1E293B]">
                 {radar.map(p => (
                   <tr key={p.project.id} className="hover:bg-[#1E293B]/40 cursor-pointer" onClick={() => onOpenProject(p.project.id, p.project.workspace_id)}>
-                    <td className="px-3 py-2 text-slate-100 font-semibold max-w-[14rem] truncate">{p.project.name}</td>
+                    <td className="px-3 py-2 text-slate-100 font-semibold max-w-[14rem] break-words">{p.project.name}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-block px-1.5 py-0.5 rounded border text-[10px] font-bold ${HEALTH_STYLES[p.health].chip}`}>{HEALTH_LABELS[p.health]}</span>
                       {p.reasons.length > 0 && <p className="text-[10px] text-slate-500 mt-0.5 max-w-[14rem]">{p.reasons.join(' · ')}</p>}
@@ -524,7 +524,7 @@ const Analyses: React.FC<any> = ({ scope, tasks, health, now, days, filters, use
               <p className="text-[10px] text-slate-500 mb-1">{q.hint}</p>
               <ul className="space-y-0.5 max-h-28 overflow-y-auto">
                 {q.list.slice(0, 8).map(x => (
-                  <li key={x.id}><button onClick={() => setSelectedTaskId(x.id)} className="text-[11px] text-slate-300 hover:text-[#93C5FD] truncate w-full text-left">• {x.title}</button></li>
+                  <li key={x.id}><button onClick={() => setSelectedTaskId(x.id)} className="text-[11px] text-slate-300 hover:text-[#93C5FD] break-words w-full text-left">• {x.title}</button></li>
                 ))}
                 {q.list.length > 8 && <li className="text-[10px] text-slate-500">+ {q.list.length - 8} autres</li>}
               </ul>

@@ -290,7 +290,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ onBackToWorkspace }) =
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2563EB]/15 border border-[#2563EB]/50 text-[#60A5FA] hover:bg-[#2563EB]/25 text-sm font-bold transition-colors min-w-0"
               >
                 <ExternalLink className="w-4 h-4 shrink-0" />
-                <span className="truncate">{currentProject.link}</span>
+                <span className="break-all">{currentProject.link}</span>
               </a>
               <button
                 onClick={() => { setLinkDraft(currentProject.link || ''); setIsEditingLink(true); }}
@@ -327,7 +327,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ onBackToWorkspace }) =
           </div>
 
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-100 tracking-tight">
+            <h1 className="text-xl font-bold text-slate-100 tracking-tight break-words">
               {currentProject.name}
             </h1>
             <span className="px-2 py-0.2 rounded text-[11px] font-bold bg-[#2563EB]/15 text-[#60A5FA] border border-[#2563EB]/30">
@@ -569,7 +569,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ onBackToWorkspace }) =
                             {task.tags.map(t => (
                               <span
                                 key={t.id}
-                                className="max-w-[140px] truncate text-[10px] font-semibold px-1.5 py-0.2 rounded"
+                                className="break-words text-[10px] font-semibold px-1.5 py-0.2 rounded"
                                 style={{ backgroundColor: `${t.color}15`, color: t.color, border: `1px solid ${t.color}35` }}
                               >
                                 {t.name}
@@ -579,7 +579,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({ onBackToWorkspace }) =
                         )}
 
                         {/* Title */}
-                        <h4 className="text-xs font-bold text-slate-100 group-hover:text-[#60A5FA] transition-colors leading-relaxed line-clamp-2">
+                        <h4 className="text-xs font-bold text-slate-100 group-hover:text-[#60A5FA] transition-colors leading-relaxed break-words whitespace-pre-wrap">
                           {task.title}
                         </h4>
 

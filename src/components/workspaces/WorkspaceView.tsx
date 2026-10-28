@@ -325,7 +325,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <h3 className="text-sm font-bold text-slate-100 group-hover:text-[#60A5FA] transition-colors">
+                    <h3 className="text-sm font-bold break-words min-w-0 text-slate-100 group-hover:text-[#60A5FA] transition-colors">
                       {prj.name}
                     </h3>
                     {isWorkspaceAdmin && (
@@ -340,7 +340,7 @@ export const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                   </div>
 
                   {prj.description && (
-                    <p className="text-xs text-slate-400 line-clamp-2 mb-3 leading-relaxed">
+                    <p className="text-xs text-slate-400 break-words whitespace-pre-wrap mb-3 leading-relaxed">
                       {prj.description}
                     </p>
                   )}
