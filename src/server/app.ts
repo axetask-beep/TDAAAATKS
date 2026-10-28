@@ -4,6 +4,7 @@ import cors from 'cors';
 import * as db from '../db/queries.ts';
 import * as gamification from '../db/gamification.ts';
 import { User } from '../types.ts';
+import { DATE_ORDER_ERROR } from '../lib/datetime.ts';
 
 // Resolved lazily (not at module load time) so a missing JWT_SECRET surfaces
 // as a normal per-request 500 error instead of crashing the whole serverless
@@ -217,6 +218,13 @@ function normalizeLink(link: unknown): string | null | undefined {
   const trimmed = link.trim();
   if (!trimmed) return null;
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+// End date before start date makes no sense. For updates, a missing field falls back to the stored value.
+function endBeforeStart(start: unknown, end: unknown): boolean {
+  if (!start || !end) return false;
+  const s = new Date(start as string).getTime(), e = new Date(end as string).getTime();
+  return !isNaN(s) && !isNaN(e) && e < s;
 }
 
 export function createApp() {
@@ -736,6 +744,7 @@ export function createApp() {
       if (!name) {
         return res.status(400).json({ error: 'Le nom du projet est requis.' });
       }
+      if (endBeforeStart(start_at, end_at)) return res.status(400).json({ error: DATE_ORDER_ERROR });
       const project = await db.createProject(wsId, name, description, start_at, end_at, status, req.user!.id, normalizeLink(req.body.link) || undefined);
       res.status(201).json(project);
     } catch (err: any) {
@@ -771,6 +780,9 @@ export function createApp() {
       }
       const { name, description, status, start_at, end_at, stopped_at } = req.body;
       const link = normalizeLink(req.body.link);
+      if ((start_at !== undefined || end_at !== undefined) && endBeforeStart(start_at !== undefined ? start_at : project.start_at, end_at !== undefined ? end_at : project.end_at)) {
+        return res.status(400).json({ error: DATE_ORDER_ERROR });
+      }
       if ((start_at !== undefined || end_at !== undefined || stopped_at !== undefined) && !(await db.userIsWorkspaceAdmin(req.user!.id, project.workspace_id, isGlobalAdmin))) {
         return res.status(403).json({ error: "Seul un administrateur du workspace peut modifier les dates ou le chrono d'un projet." });
       }
@@ -938,6 +950,7 @@ export function createApp() {
       if (!title) {
         return res.status(400).json({ error: 'Le titre de la tâche est requis.' });
       }
+      if (endBeforeStart(start_at, end_at)) return res.status(400).json({ error: DATE_ORDER_ERROR });
       const task = await db.createTask({
         project_id: req.params.id,
         title,
@@ -1021,6 +1034,9 @@ export function createApp() {
         before: Object.fromEntries(Object.keys(req.body || {}).map(k => [k, k === 'tag_ids' ? task.tags?.map(t => t.name) : (task as any)[k]])),
       };
       const { title, description, status, priority, assignee_id, start_at, end_at, stopped_at, estimated_minutes, tag_ids, position } = req.body;
+      if ((start_at !== undefined || end_at !== undefined) && endBeforeStart(start_at !== undefined ? start_at : task.start_at, end_at !== undefined ? end_at : task.end_at)) {
+        return res.status(400).json({ error: DATE_ORDER_ERROR });
+      }
       const updated = await db.updateTask(req.params.id, {
         title,
         description,

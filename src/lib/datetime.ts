@@ -10,6 +10,14 @@ export function combineDateAndTime(date: string, time: string): string | undefin
   return new Date(y, m - 1, d, hh || 0, mm || 0, 0).toISOString();
 }
 
+export const DATE_ORDER_ERROR = 'La date de fin ne peut pas être avant la date de début.';
+
+// True when both dates are set and the end falls before the start.
+export function isEndBeforeStart(startDate: string, startTime: string, endDate: string, endTime: string): boolean {
+  const s = combineDateAndTime(startDate, startTime), e = combineDateAndTime(endDate, endTime);
+  return !!s && !!e && e < s;
+}
+
 export function splitISOToDateAndTime(iso?: string | null): { date: string; time: string } {
   if (!iso) return { date: '', time: '' };
   const dt = new Date(iso);

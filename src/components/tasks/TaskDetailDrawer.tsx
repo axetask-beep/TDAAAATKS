@@ -8,7 +8,7 @@ import { StatusBadge, PriorityBadge } from '../common/Badge';
 import { Avatar } from '../common/Avatar';
 import { ChronoWidget } from '../common/ChronoWidget';
 import { CalendarPicker } from '../common/CalendarPicker';
-import { combineDateAndTime, splitISOToDateAndTime } from '../../lib/datetime';
+import { combineDateAndTime, splitISOToDateAndTime, isEndBeforeStart, DATE_ORDER_ERROR } from '../../lib/datetime';
 import { readFileAsDataUrl } from '../../lib/file';
 
 // Grow a textarea to fit its content so long text is always fully readable.
@@ -149,9 +149,10 @@ export const TaskDetailDrawer: React.FC = () => {
     tagIds: [...tagIds].sort(),
   };
   const isDirty = !!saved && JSON.stringify(saved) !== JSON.stringify(current);
+  const datesInvalid = isEndBeforeStart(startDate, startTime, endDate, endTime);
 
   const handleSaveEdits = async () => {
-    if (!task || !saved) return;
+    if (!task || !saved || datesInvalid) return;
     const updates: Record<string, unknown> = {};
     if (current.title !== saved.title) updates.title = current.title;
     if (current.description !== saved.description) updates.description = current.description;
@@ -532,6 +533,7 @@ export const TaskDetailDrawer: React.FC = () => {
                   <div className="space-y-1.5">
                     <CalendarPicker
                       value={endDate}
+                      min={startDate}
                       onChange={val => {
                         setEndDate(val);
                       }}
@@ -547,6 +549,7 @@ export const TaskDetailDrawer: React.FC = () => {
                     />
                   </div>
                 </div>
+                {datesInvalid && <p className="col-span-2 text-[11px] font-semibold text-rose-400">{DATE_ORDER_ERROR}</p>}
               </div>
 
               {/* Tags Selector */}
@@ -878,14 +881,14 @@ export const TaskDetailDrawer: React.FC = () => {
             )}
             <button
               onClick={() => resetForm(task)}
-              disabled={!isDirty || saving}
+              disabled={!isDirty || saving || datesInvalid}
               className="px-3.5 py-1.5 rounded text-xs font-semibold text-slate-300 bg-[#0F172A] border border-[#1E293B] hover:bg-[#1E293B] hover:text-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Annuler
             </button>
             <button
               onClick={handleSaveEdits}
-              disabled={!isDirty || saving}
+              disabled={!isDirty || saving || datesInvalid}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded text-xs font-bold bg-[#2563EB] hover:bg-[#3B82F6] text-white border border-[#3B82F6]/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Check className="w-3.5 h-3.5" />

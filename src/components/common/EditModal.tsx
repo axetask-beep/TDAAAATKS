@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { X, Save } from 'lucide-react';
-import { combineDateAndTime, splitISOToDateAndTime } from '../../lib/datetime';
+import { combineDateAndTime, splitISOToDateAndTime, isEndBeforeStart, DATE_ORDER_ERROR } from '../../lib/datetime';
 import { CalendarPicker } from './CalendarPicker';
 
 const PRESET_COLORS = [
@@ -223,6 +223,10 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+    if (isEndBeforeStart(startDate, startTime, endDate, endTime)) {
+      setError(DATE_ORDER_ERROR);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -347,7 +351,7 @@ export const EditProjectModal: React.FC<EditProjectModalProps> = ({
                 Fin (date et heure)
               </label>
               <div className="space-y-1.5">
-                <CalendarPicker value={endDate} onChange={setEndDate} placeholder="Date de fin" />
+                <CalendarPicker value={endDate} onChange={setEndDate} placeholder="Date de fin" min={startDate} />
                 <input
                   type="time"
                   value={endTime}

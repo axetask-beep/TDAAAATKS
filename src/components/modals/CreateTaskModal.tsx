@@ -6,7 +6,7 @@ import { api } from '../../lib/api';
 import { Project, User, Tag, TaskPriority, TaskStatus } from '../../types';
 import { X, Plus, Tag as TagIcon, Check } from 'lucide-react';
 import { CalendarPicker } from '../common/CalendarPicker';
-import { combineDateAndTime } from '../../lib/datetime';
+import { combineDateAndTime, isEndBeforeStart, DATE_ORDER_ERROR } from '../../lib/datetime';
 
 export const CreateTaskModal: React.FC = () => {
   const { user } = useAuth();
@@ -81,6 +81,10 @@ export const CreateTaskModal: React.FC = () => {
     }
     if (!projectId) {
       setError('Veuillez sélectionner un projet.');
+      return;
+    }
+    if (isEndBeforeStart(startDate, startTime, endDate, endTime)) {
+      setError(DATE_ORDER_ERROR);
       return;
     }
 
@@ -272,7 +276,7 @@ export const CreateTaskModal: React.FC = () => {
                 Fin (date et heure)
               </label>
               <div className="space-y-1.5">
-                <CalendarPicker value={endDate} onChange={setEndDate} placeholder="Date de fin" />
+                <CalendarPicker value={endDate} onChange={setEndDate} placeholder="Date de fin" min={startDate} />
                 <input
                   type="time"
                   value={endTime}

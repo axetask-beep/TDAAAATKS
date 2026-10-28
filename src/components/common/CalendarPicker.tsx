@@ -6,6 +6,7 @@ interface CalendarPickerProps {
   value: string; // YYYY-MM-DD
   onChange: (value: string) => void;
   placeholder?: string;
+  min?: string; // YYYY-MM-DD, earlier days are disabled
 }
 
 const DAYS = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
@@ -27,6 +28,7 @@ export const CalendarPicker: React.FC<CalendarPickerProps> = ({
   value,
   onChange,
   placeholder = 'Sélectionner une date',
+  min,
 }) => {
   const today = new Date();
 
@@ -184,15 +186,20 @@ export const CalendarPicker: React.FC<CalendarPickerProps> = ({
           const key = `${viewYear}-${viewMonth}-${day}`;
           const isToday = key === todayKey;
           const isSelected = key === selectedKey;
+          const iso = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const isDisabled = !!min && iso < min;
 
           return (
             <button
               key={day}
               type="button"
               onClick={() => selectDay(day)}
+              disabled={isDisabled}
               className={`
                 relative h-8 w-full text-xs font-medium rounded-md transition-all
-                ${isSelected
+                ${isDisabled
+                  ? 'text-slate-700 cursor-not-allowed'
+                  : isSelected
                   ? 'bg-[#2563EB] text-white font-bold shadow-sm shadow-blue-500/30'
                   : isToday
                     ? 'text-[#60A5FA] font-bold hover:bg-[#1E293B]'

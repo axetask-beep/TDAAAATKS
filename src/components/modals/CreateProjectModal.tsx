@@ -4,7 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { api } from '../../lib/api';
 import { FolderGit2, X, Plus } from 'lucide-react';
 import { CalendarPicker } from '../common/CalendarPicker';
-import { combineDateAndTime } from '../../lib/datetime';
+import { combineDateAndTime, isEndBeforeStart, DATE_ORDER_ERROR } from '../../lib/datetime';
 
 export const CreateProjectModal: React.FC = () => {
   const { notify } = useToast();
@@ -32,6 +32,10 @@ export const CreateProjectModal: React.FC = () => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Veuillez renseigner le nom du projet.');
+      return;
+    }
+    if (isEndBeforeStart(startDate, startTime, endDate, endTime)) {
+      setError(DATE_ORDER_ERROR);
       return;
     }
 
@@ -159,7 +163,7 @@ export const CreateProjectModal: React.FC = () => {
                 Fin (date et heure)
               </label>
               <div className="space-y-1.5">
-                <CalendarPicker value={endDate} onChange={setEndDate} placeholder="Date de fin" />
+                <CalendarPicker value={endDate} onChange={setEndDate} placeholder="Date de fin" min={startDate} />
                 <input
                   type="time"
                   value={endTime}
