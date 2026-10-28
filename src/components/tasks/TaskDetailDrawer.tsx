@@ -10,6 +10,13 @@ import { ChronoWidget } from '../common/ChronoWidget';
 import { CalendarPicker } from '../common/CalendarPicker';
 import { combineDateAndTime, splitISOToDateAndTime } from '../../lib/datetime';
 import { readFileAsDataUrl } from '../../lib/file';
+
+// Grow a textarea to fit its content so long text is always fully readable.
+const autoGrow = (el: HTMLTextAreaElement | null) => {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+};
 import confetti from 'canvas-confetti';
 import {
   ArrowLeft,
@@ -418,11 +425,13 @@ export const TaskDetailDrawer: React.FC = () => {
             <>
               {/* Title input */}
               <div>
-                <input
-                  type="text"
+                <textarea
+                  ref={autoGrow}
+                  rows={1}
                   value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  className="w-full text-lg font-bold bg-transparent text-slate-100 placeholder-slate-500 focus:outline-none focus:bg-[#0F172A] p-1.5 rounded transition-colors border border-transparent focus:border-[#2563EB]/50"
+                  onChange={e => { setTitle(e.target.value.replace(/\n/g, ' ')); autoGrow(e.target); }}
+                  onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                  className="w-full resize-none overflow-hidden break-words text-lg font-bold bg-transparent text-slate-100 placeholder-slate-500 focus:outline-none focus:bg-[#0F172A] p-1.5 rounded transition-colors border border-transparent focus:border-[#2563EB]/50"
                   placeholder="Titre de la tâche..."
                 />
               </div>
@@ -581,11 +590,12 @@ export const TaskDetailDrawer: React.FC = () => {
                   Description & Spécifications
                 </label>
                 <textarea
+                  ref={autoGrow}
                   value={description}
-                  onChange={e => setDescription(e.target.value)}
+                  onChange={e => { setDescription(e.target.value); autoGrow(e.target); }}
                   placeholder="Spécifications, paramètres et détails techniques..."
                   rows={4}
-                  className="w-full p-2.5 rounded bg-[#090D16] border border-[#1E293B] text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#2563EB]/60 leading-relaxed"
+                  className="w-full resize-none overflow-hidden p-2.5 rounded bg-[#090D16] border border-[#1E293B] text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#2563EB]/60 leading-relaxed"
                 />
               </div>
 
@@ -656,14 +666,14 @@ export const TaskDetailDrawer: React.FC = () => {
                           key={sub.id}
                           className="flex items-center justify-between p-2 rounded bg-[#0F172A] border border-[#1E293B] group hover:border-[#334155]"
                         >
-                          <label className="flex items-center gap-2 flex-1 cursor-pointer min-w-0">
+                          <label className="flex items-start gap-2 flex-1 cursor-pointer min-w-0">
                             <input
                               type="checkbox"
                               checked={sub.completed}
                               onChange={() => handleToggleSubtask(sub.id, sub.completed)}
-                              className="w-3.5 h-3.5 rounded border-[#1E293B] text-[#2563EB] focus:ring-0 accent-[#2563EB]"
+                              className="w-3.5 h-3.5 mt-0.5 shrink-0 rounded border-[#1E293B] text-[#2563EB] focus:ring-0 accent-[#2563EB]"
                             />
-                            <span className={`text-xs truncate ${sub.completed ? 'line-through text-slate-500' : 'text-slate-200'}`}>
+                            <span className={`text-xs whitespace-pre-wrap break-words min-w-0 ${sub.completed ? 'line-through text-slate-500' : 'text-slate-200'}`}>
                               {sub.title}
                             </span>
                           </label>
