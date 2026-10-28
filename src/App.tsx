@@ -15,6 +15,7 @@ import { AnnouncementsView } from './components/announcements/AnnouncementsView'
 import { ActivityLogView } from './components/activity/ActivityLogView';
 import { SettingsView } from './components/settings/SettingsView';
 import { TaskDetailDrawer } from './components/tasks/TaskDetailDrawer';
+import { FloatingTimer } from './components/common/FloatingTimer';
 import { CreateTaskModal } from './components/modals/CreateTaskModal';
 import { CreateProjectModal } from './components/modals/CreateProjectModal';
 import { CreateWorkspaceModal } from './components/modals/CreateWorkspaceModal';
@@ -155,6 +156,7 @@ function MainAppLayout() {
       </main>
 
       {/* Modals & Overlays */}
+      <FloatingTimer />
       <TaskDetailDrawer />
       <CreateTaskModal />
       <CreateProjectModal />
