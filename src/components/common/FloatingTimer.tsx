@@ -7,8 +7,14 @@ import { Task } from '../../types';
 import { ChronoWidget } from './ChronoWidget';
 import { Clock, ChevronDown, Pin } from 'lucide-react';
 
+// AxeTask desktop app (Electron): it turns this named popup into an always-on-top window.
+const isDesktopApp = navigator.userAgent.includes('Electron');
+
 // Chrome/Edge desktop only: an always-on-top window that floats over every other app.
-const pipApi = (window as any).documentPictureInPicture as
+const pipApi = (isDesktopApp
+  ? { requestWindow: async ({ width, height }: { width: number; height: number }) =>
+      window.open('about:blank', 'axetask-chrono', `width=${width},height=${height}`)! }
+  : (window as any).documentPictureInPicture) as
   | { requestWindow: (o: { width: number; height: number }) => Promise<Window> }
   | undefined;
 
@@ -58,6 +64,12 @@ export const FloatingTimer: React.FC = () => {
     win.addEventListener('pagehide', () => setPipWin(null));
     setPipWin(win);
   };
+
+  // Desktop app: pop the always-on-top chrono out as soon as a task is in progress.
+  useEffect(() => {
+    if (isDesktopApp && tasks.length && !pipWin) openPip();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks.length > 0]);
 
   if (!tasks.length) return null;
 
