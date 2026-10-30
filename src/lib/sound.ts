@@ -38,9 +38,32 @@ const STORAGE_KEY_SOUND_ENABLED = 'axetask_sound_enabled';
 const STORAGE_KEY_SOUND_VOLUME = 'axetask_sound_volume';
 const STORAGE_KEY_SOUND_TYPE = 'axetask_sound_type';
 
-const VALID_SOUND_TYPES: SoundEffectType[] = [
+export const SOUND_TYPES: SoundEffectType[] = [
   'crystal_bell', 'marimba_pop', 'digital_ping', 'harmonic_success', 'harp_chime', 'subtle_tap',
 ];
+const VALID_SOUND_TYPES = SOUND_TYPES;
+
+export const SOUND_LABELS: Record<SoundEffectType, string> = {
+  crystal_bell: 'Cloche cristal',
+  marimba_pop: 'Marimba',
+  digital_ping: 'Ping',
+  harmonic_success: 'Accord',
+  harp_chime: 'Harpe',
+  subtle_tap: 'Tap discret',
+};
+
+// Browsers keep audio muted until the user interacts with the page: an
+// AudioContext first created by a background notification stays suspended
+// and plays nothing. Create/resume it on the first click or key press.
+if (typeof window !== 'undefined') {
+  const unlock = () => {
+    getAudioContext();
+    window.removeEventListener('pointerdown', unlock);
+    window.removeEventListener('keydown', unlock);
+  };
+  window.addEventListener('pointerdown', unlock);
+  window.addEventListener('keydown', unlock);
+}
 
 export function getSoundSettings(): SoundConfig {
   if (typeof window === 'undefined') return { enabled: true, volume: 1.0, type: UNIFIED_NOTIFICATION_SOUND };
@@ -279,15 +302,6 @@ export function playNotificationSound(specificType?: SoundEffectType): string {
     console.warn('[AxeTask Sound Engine] Play error:', err);
     return 'error';
   }
-}
-
-/**
- * Picks one of the 6 presets at random — used by the "surprise me" preview
- * button in Settings, never by real notifications (those use the user's
- * saved preference, see getSoundSettings().type).
- */
-export function pickRandomSoundType(): SoundEffectType {
-  return VALID_SOUND_TYPES[Math.floor(Math.random() * VALID_SOUND_TYPES.length)];
 }
 
 /**

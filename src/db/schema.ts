@@ -271,6 +271,20 @@ export const jobFunctionsRelations = relations(jobFunctions, ({ many }) => ({
   users: many(users),
 }));
 
+// Reports each user uploads (Word, Excel, PDF...). The file itself is a data
+// URL in file_data, same as attachments.file_url (no object storage here).
+export const reports = pgTable('reports', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  file_name: text('file_name').notNull(),
+  file_data: text('file_data').notNull(),
+  file_size: integer('file_size'),
+  file_type: text('file_type'),
+  created_at: timestamp('created_at').defaultNow(),
+}, (t) => [
+  index('reports_user_idx').on(t.user_id),
+]);
+
 export const announcementsRelations = relations(announcements, ({ one }) => ({
   author: one(users, {
     fields: [announcements.created_by],

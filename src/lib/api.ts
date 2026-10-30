@@ -18,6 +18,7 @@ import {
   JobFunction,
   TimeAllocationWorkspace,
   Announcement,
+  Report,
   ActivityLog
 } from '../types';
 import type { Scope } from './insights';
@@ -383,6 +384,12 @@ export const api = {
   },
 
   // Announcements
+  getReports: () => fetchWithAuth<Report[]>('/api/reports'),
+  getReportFile: (id: string) => fetchWithAuth<{ file_name: string; file_data: string }>(`/api/reports/${id}`),
+  uploadReport: (data: { file_name: string; file_data: string; file_size?: number; file_type?: string }) =>
+    fetchWithAuth<{ id: string }>('/api/reports', { method: 'POST', body: JSON.stringify(data) }),
+  deleteReport: (id: string) => fetchWithAuth<{ success: boolean }>(`/api/reports/${id}`, { method: 'DELETE' }),
+
   getAnnouncements: (search?: string) => {
     const qs = search?.trim() ? `?q=${encodeURIComponent(search.trim())}` : '';
     return fetchWithAuth<Announcement[]>(`/api/announcements${qs}`);

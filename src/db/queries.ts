@@ -17,6 +17,7 @@ import {
   Subtask,
   Comment,
   Attachment,
+  Report,
   TimeEntry,
   Tag,
   TaskStatus,
@@ -2149,6 +2150,44 @@ export async function deleteAnnouncement(id: string): Promise<boolean> {
     console.error('Failed to delete announcement:', error);
     throw new Error('Database query failed. Please try again later.', { cause: error });
   }
+}
+
+// ----------------- REPORTS -----------------
+
+// List without file_data: files are fetched one at a time on download.
+// userId = null → everyone's reports (admins).
+export async function getReports(userId: string | null): Promise<Report[]> {
+  const r = schema.reports;
+  const rows = await db.select({
+    id: r.id, file_name: r.file_name, file_size: r.file_size, file_type: r.file_type,
+    created_at: r.created_at, author_id: schema.users.id, author_name: schema.users.name,
+  }).from(r)
+    .innerJoin(schema.users, eq(schema.users.id, r.user_id))
+    .where(userId ? eq(r.user_id, userId) : undefined)
+    .orderBy(desc(r.created_at));
+  return rows.map(({ author_id, author_name, created_at, ...rest }) => ({
+    ...rest,
+    created_at: created_at?.toISOString() || new Date().toISOString(),
+    author: { id: author_id, name: author_name },
+  }));
+}
+
+export async function getReportById(id: string) {
+  const [row] = await db.select().from(schema.reports).where(eq(schema.reports.id, id));
+  return row || null;
+}
+
+export async function createReport(userId: string, data: { file_name: string; file_data: string; file_size?: number; file_type?: string }) {
+  const [row] = await db.insert(schema.reports).values({
+    id: crypto.randomUUID(), user_id: userId, file_name: data.file_name, file_data: data.file_data,
+    file_size: data.file_size ?? null, file_type: data.file_type ?? null,
+  }).returning({ id: schema.reports.id });
+  return row;
+}
+
+export async function deleteReport(id: string): Promise<boolean> {
+  const result = await db.delete(schema.reports).where(eq(schema.reports.id, id)).returning({ id: schema.reports.id });
+  return result.length > 0;
 }
 
 // ----------------- NOTIFICATIONS -----------------

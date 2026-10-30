@@ -23,7 +23,8 @@ import {
   ScrollText,
   Radar,
   BarChart3,
-  Trophy
+  Trophy,
+  FileText
 } from 'lucide-react';
 
 const NavItem: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
@@ -41,7 +42,7 @@ const NavItem: React.FC<{ active: boolean; onClick: () => void; icon: React.Reac
   </button>
 );
 
-type SidebarView = 'command' | 'analytics' | 'progress' | 'dashboard' | 'workspaces' | 'workspace_detail' | 'project_detail' | 'time_tracking' | 'messages' | 'announcements' | 'activity' | 'settings';
+type SidebarView = 'command' | 'analytics' | 'progress' | 'dashboard' | 'workspaces' | 'workspace_detail' | 'project_detail' | 'time_tracking' | 'messages' | 'announcements' | 'reports' | 'activity' | 'settings';
 
 interface SidebarProps {
   currentView: SidebarView;
@@ -277,6 +278,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, isOpe
               <span>Annonces</span>
             </div>
           </button>
+
+          <NavItem active={currentView === 'reports'} onClick={() => onNavigate('reports')} icon={<FileText className="w-3.5 h-3.5 text-sky-400" />} label="Rapports" />
 
           {isGlobalAdmin && (
             <button

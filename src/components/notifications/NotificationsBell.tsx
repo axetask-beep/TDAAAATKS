@@ -126,7 +126,8 @@ export const NotificationsBell: React.FC<NotificationsBellProps> = ({ onOpenWork
             // throws on Android Chrome.
             navigator.serviceWorker?.getRegistration().then(reg => {
               newOnes.slice(0, 3).forEach(n => {
-                const opts = { body: n.message || undefined, icon: '/icon-192.png', tag: n.id, renotify: true, vibrate: [200, 100, 200] } as NotificationOptions;
+                // silent: the chosen AxeTask sound already played above.
+                const opts = { body: n.message || undefined, icon: '/icon-192.png', tag: n.id, renotify: true, silent: true, vibrate: [200, 100, 200] } as NotificationOptions;
                 if (reg) reg.showNotification(n.title, opts);
                 else new Notification(n.title, opts).onclick = () => window.focus();
               });
@@ -174,8 +175,27 @@ export const NotificationsBell: React.FC<NotificationsBellProps> = ({ onOpenWork
     return () => document.removeEventListener('pointerdown', ask);
   }, []);
 
+  // Web Push arrived while this tab is open: play the chosen sound here (the
+  // system notification is silent) and mark it so the next poll doesn't replay it.
   useEffect(() => {
-    return visiblePoll(pollNotifications, 20000);
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type !== 'axetask-play-sound') return;
+      if (e.data.id && announcedIdsRef.current.has(e.data.id)) return;
+      playNotificationSound();
+      if (e.data.id) {
+        announcedIdsRef.current.add(e.data.id);
+        saveAnnouncedIds(announcedIdsRef.current);
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, []);
+
+  useEffect(() => {
+    // Desktop app (Electron) has no Web Push: keep polling while it sits in
+    // the tray, or notifications would never arrive there.
+    // ponytail: one request every 20 s per open desktop app, even hidden.
+    return visiblePoll(pollNotifications, 20000, navigator.userAgent.includes('Electron'));
   }, [pollNotifications]);
 
   useEffect(() => {

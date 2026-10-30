@@ -153,6 +153,8 @@ const AUDIT_ACTIONS: [string, string, string][] = [
   ['POST', '/api/conversations/:id/messages', 'Message envoyé'],
   ['POST', '/api/announcements', 'Annonce publiée'],
   ['DELETE', '/api/announcements/:id', 'Annonce supprimée'],
+  ['POST', '/api/reports', 'Rapport importé'],
+  ['DELETE', '/api/reports/:id', 'Rapport supprimé'],
   ['POST', '/api/xp/kudos', 'Reconnaissance envoyée'],
   ['POST', '/api/xp/corrections', 'Correction AXP'],
   ['PATCH', '/api/xp/privacy', 'Visibilité classement modifiée'],
@@ -1506,6 +1508,60 @@ export function createApp() {
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Erreur lors de la suppression de l'annonce." });
+    }
+  });
+
+  // --- Reports ---
+  // Everyone uploads their own reports; global admins see and manage all of them.
+
+  app.get('/api/reports', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      res.json(await db.getReports(req.user!.role === 'admin' ? null : req.user!.id));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Erreur lors de la récupération des rapports.' });
+    }
+  });
+
+  app.get('/api/reports/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const report = await db.getReportById(req.params.id);
+      if (!report || (report.user_id !== req.user!.id && req.user!.role !== 'admin')) {
+        return res.status(404).json({ error: 'Rapport introuvable.' });
+      }
+      res.json({ file_name: report.file_name, file_data: report.file_data });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Erreur lors du téléchargement du rapport.' });
+    }
+  });
+
+  app.post('/api/reports', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    const { file_name, file_data, file_size, file_type } = req.body || {};
+    if (typeof file_name !== 'string' || !file_name.trim() || typeof file_data !== 'string' || !file_data.startsWith('data:')) {
+      return res.status(400).json({ error: 'Fichier manquant ou invalide.' });
+    }
+    try {
+      const report = await db.createReport(req.user!.id, {
+        file_name: file_name.trim().slice(0, 255),
+        file_data,
+        file_size: Number.isFinite(file_size) ? file_size : undefined,
+        file_type: typeof file_type === 'string' ? file_type.slice(0, 255) : undefined,
+      });
+      res.status(201).json(report);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Erreur lors de l'import du rapport." });
+    }
+  });
+
+  app.delete('/api/reports/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const report = await db.getReportById(req.params.id);
+      if (!report || (report.user_id !== req.user!.id && req.user!.role !== 'admin')) {
+        return res.status(404).json({ error: 'Rapport introuvable.' });
+      }
+      await db.deleteReport(report.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Erreur lors de la suppression du rapport.' });
     }
   });
 

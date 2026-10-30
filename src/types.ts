@@ -271,6 +271,15 @@ export interface Announcement {
   author?: { id: string; name: string; avatar_url?: string | null } | null;
 }
 
+export interface Report {
+  id: string;
+  file_name: string;
+  file_size?: number | null;
+  file_type?: string | null;
+  created_at: string;
+  author: { id: string; name: string };
+}
+
 export interface AppNotification {
   id: string;
   user_id: string;
