@@ -127,11 +127,10 @@ export const FloatingTimer: React.FC = () => {
   );
 };
 
-// Desktop app card: dragged by its top bar (the window has no title bar).
+// Desktop app card. The window has no title bar, so the top bar moves it
+// (by hand: Electron ignores CSS drag regions in windows opened by the page).
 // Its height goes to the desktop app through the window title ("chrono:<px>"),
 // which resizes the window to fit.
-const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
-
 const DesktopCard: React.FC<{ win: Window; children: React.ReactNode }> = ({ win, children }) => {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -143,19 +142,34 @@ const DesktopCard: React.FC<{ win: Window; children: React.ReactNode }> = ({ win
     return () => ro.disconnect();
   }, [win]);
 
+  // Grab point inside the window, kept while dragging.
+  const grab = useRef<{ x: number; y: number } | null>(null);
+  const onPointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    grab.current = { x: e.screenX - win.screenX, y: e.screenY - win.screenY };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (grab.current) win.moveTo(e.screenX - grab.current.x, e.screenY - grab.current.y);
+  };
+  const onPointerUp = () => { grab.current = null; };
+
   return (
-    <div
-      ref={ref}
-      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-      className="rounded-xl bg-[#090D16] border border-[#2563EB]/50 p-1.5 flex flex-col gap-1.5 select-none"
-    >
-      <div className="flex items-center justify-between px-1 text-[10px] font-bold uppercase tracking-wider text-[#60A5FA]">
-        <span className="flex items-center gap-1 cursor-move"><GripHorizontal className="w-3 h-3" />En cours</span>
-        <button style={noDrag} onClick={() => win.close()} title="Masquer" className="p-0.5 rounded text-slate-400 hover:text-white hover:bg-[#1E293B]">
+    <div ref={ref} className="rounded-xl bg-[#090D16] border border-[#2563EB]/50 p-1.5 flex flex-col gap-1.5 select-none">
+      <div
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        title="Glisser pour déplacer"
+        className="flex items-center justify-between px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#60A5FA] cursor-move touch-none"
+      >
+        <span className="flex items-center gap-1"><GripHorizontal className="w-3 h-3" />En cours</span>
+        <button onClick={() => win.close()} title="Masquer" className="p-0.5 rounded text-slate-400 hover:text-white hover:bg-[#1E293B] cursor-pointer">
           <X className="w-3 h-3" />
         </button>
       </div>
-      <div style={noDrag} className="flex flex-col gap-1.5">{children}</div>
+      <div className="flex flex-col gap-1.5">{children}</div>
     </div>
   );
 };
