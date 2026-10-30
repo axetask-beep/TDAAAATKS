@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { api } from '../../lib/api';
 import { Task } from '../../types';
 import { ChronoWidget } from './ChronoWidget';
-import { Clock, ChevronDown, Pin } from 'lucide-react';
+import { Clock, ChevronDown, Pin, GripHorizontal, X } from 'lucide-react';
 
 // AxeTask desktop app (Electron): it turns this named popup into an always-on-top window.
 const isDesktopApp = navigator.userAgent.includes('Electron');
@@ -60,7 +60,9 @@ export const FloatingTimer: React.FC = () => {
     if (!pipApi) return;
     const win = await pipApi.requestWindow({ width: 320, height: 64 + 48 * Math.min(tasks.length, 4) });
     copyStyles(win.document);
-    win.document.body.className = 'bg-[#090D16] p-2 m-0';
+    // Desktop app: the window is transparent, only the card shows.
+    win.document.body.className = isDesktopApp ? 'm-0 p-0 overflow-hidden' : 'bg-[#090D16] p-2 m-0';
+    if (isDesktopApp) win.document.documentElement.style.background = win.document.body.style.background = 'transparent';
     win.addEventListener('pagehide', () => setPipWin(null));
     setPipWin(win);
   };
@@ -85,6 +87,10 @@ export const FloatingTimer: React.FC = () => {
       <span className="text-xs font-semibold text-slate-100 break-words min-w-0">{t.title}</span>
     </button>
   ));
+
+  if (pipWin && isDesktopApp) {
+    return createPortal(<DesktopCard win={pipWin}>{cards(true)}</DesktopCard>, pipWin.document.body);
+  }
 
   // While the always-on-top window is open, the chronos live there instead of in the page.
   if (pipWin) {
@@ -117,6 +123,39 @@ export const FloatingTimer: React.FC = () => {
         )}
         {cards(false)}
       </div>
+    </div>
+  );
+};
+
+// Desktop app card: dragged by its top bar (the window has no title bar).
+// Its height goes to the desktop app through the window title ("chrono:<px>"),
+// which resizes the window to fit.
+const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
+
+const DesktopCard: React.FC<{ win: Window; children: React.ReactNode }> = ({ win, children }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const report = () => { win.document.title = `chrono:${Math.ceil(el.getBoundingClientRect().height)}`; };
+    const ro = new (win as any).ResizeObserver(report);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [win]);
+
+  return (
+    <div
+      ref={ref}
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      className="rounded-xl bg-[#090D16] border border-[#2563EB]/50 p-1.5 flex flex-col gap-1.5 select-none"
+    >
+      <div className="flex items-center justify-between px-1 text-[10px] font-bold uppercase tracking-wider text-[#60A5FA]">
+        <span className="flex items-center gap-1 cursor-move"><GripHorizontal className="w-3 h-3" />En cours</span>
+        <button style={noDrag} onClick={() => win.close()} title="Masquer" className="p-0.5 rounded text-slate-400 hover:text-white hover:bg-[#1E293B]">
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+      <div style={noDrag} className="flex flex-col gap-1.5">{children}</div>
     </div>
   );
 };
