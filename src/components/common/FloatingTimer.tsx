@@ -5,6 +5,8 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 import { api } from '../../lib/api';
 import { Task } from '../../types';
 import { ChronoWidget } from './ChronoWidget';
+import { alertStage } from '../../lib/chrono';
+import { playAlarmSound, playNotificationSound } from '../../lib/sound';
 import { Clock, ChevronDown, Pin, GripHorizontal, X } from 'lucide-react';
 
 // AxeTask desktop app (Electron): it turns this named popup into an always-on-top window.
@@ -50,6 +52,26 @@ export const FloatingTimer: React.FC = () => {
       .then(all => setTasks(all.filter(t => t.status === 'en_cours' && t.assignee_id === user.id)))
       .catch(() => {});
   }, [user, taskVersion]);
+
+  // Sound alerts: the usual sound 5 min before the end, then the 3 s alarm at
+  // the end and every 15 min while overdue. The last stage played is kept per
+  // task + end date, so a reload (or a second tab) doesn't replay it.
+  useEffect(() => {
+    const check = () => {
+      for (const t of tasks) {
+        if (!t.end_at || t.completed_at) continue;
+        const stage = alertStage(new Date(t.end_at).getTime(), Date.now());
+        const key = `axetask_alert_${t.id}_${t.end_at}`;
+        // ponytail: keys pile up in localStorage (a few bytes each), prune if it ever matters.
+        if (stage <= Number(localStorage.getItem(key) ?? -1)) continue;
+        localStorage.setItem(key, String(stage));
+        if (stage === 0) playNotificationSound(); else playAlarmSound();
+      }
+    };
+    check();
+    const id = setInterval(check, 5000);
+    return () => clearInterval(id);
+  }, [tasks]);
 
   // No task left in progress → close the floating window.
   useEffect(() => {
@@ -100,6 +122,9 @@ export const FloatingTimer: React.FC = () => {
   // PC: one horizontal row (scrolls sideways if too many).
   // Mobile: with several tasks, a toggle opens them as a dropdown list.
   return (
+    <>
+    {/* Room under the page so its last buttons can scroll above the chrono instead of hiding under it. */}
+    <div aria-hidden className="h-20 bg-[#090D16]" />
     <div className="fixed bottom-4 right-4 left-4 md:left-auto md:max-w-[calc(100vw-2rem)] z-40 flex flex-col items-end gap-1.5 pointer-events-none [&>*]:pointer-events-auto">
       {multi && (
         <button
@@ -124,6 +149,7 @@ export const FloatingTimer: React.FC = () => {
         {cards(false)}
       </div>
     </div>
+    </>
   );
 };
 

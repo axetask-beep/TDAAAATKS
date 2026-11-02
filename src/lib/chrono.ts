@@ -93,3 +93,14 @@ export const CHRONO_LABELS: Record<ChronoStatus, string> = {
   stopped: 'Arrêté manuellement',
   stopped_overtime: 'Arrêté manuellement (en retard)',
 };
+
+// Sound alerts for a task in progress, as a growing "stage" number:
+// -1 nothing yet, 0 = 5 min before the end, 1 = end reached,
+// 2, 3… = a reminder every 15 min while it stays overdue.
+export const ALERT_PREWARN_MS = 5 * 60 * 1000;
+export const ALERT_REMIND_MS = 15 * 60 * 1000;
+export function alertStage(endMs: number, nowMs: number): number {
+  if (nowMs < endMs - ALERT_PREWARN_MS) return -1;
+  if (nowMs < endMs) return 0;
+  return 1 + Math.floor((nowMs - endMs) / ALERT_REMIND_MS);
+}

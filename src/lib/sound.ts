@@ -311,3 +311,37 @@ export function playNotificationSound(specificType?: SoundEffectType): string {
 export function playPreferredNotificationSound(): string {
   return playNotificationSound();
 }
+
+/**
+ * Overtime alarm: its own sound (not the user's preset), an insistent
+ * two-tone beep-beep for 3 seconds. Muted by the same on/off switch.
+ */
+export function playAlarmSound(): void {
+  if (!getSoundSettings().enabled) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.5, now);
+    master.connect(ctx.destination);
+    // 15 beeps of 0.12 s every 0.2 s = 3 s, alternating high/low.
+    for (let i = 0; i < 15; i++) {
+      const t = now + i * 0.2;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(i % 2 ? 1320 : 990, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(1, t + 0.01);
+      gain.gain.setValueAtTime(1, t + 0.11);
+      gain.gain.linearRampToValueAtTime(0.0001, t + 0.12);
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(t);
+      osc.stop(t + 0.13);
+    }
+  } catch (err) {
+    console.warn('[AxeTask Sound Engine] Alarm error:', err);
+  }
+}

@@ -7,6 +7,19 @@ import {
   planDay, riskBucket, onTimeRate, periodCompare, missions, XP_RULES, DAY_MS, Scope,
 } from '../src/lib/insights.ts';
 
+import { alertStage } from '../src/lib/chrono.ts';
+
+// Chrono sound alerts: 5 min before, at the end, then every 15 min.
+{
+  const E = 1_000_000_000, M = 60_000;
+  assert.equal(alertStage(E, E - 6 * M), -1);
+  assert.equal(alertStage(E, E - 5 * M), 0);
+  assert.equal(alertStage(E, E), 1);
+  assert.equal(alertStage(E, E + 14 * M), 1);
+  assert.equal(alertStage(E, E + 15 * M), 2);
+  assert.equal(alertStage(E, E + 31 * M), 3);
+}
+
 const NOW = Date.UTC(2026, 9, 21, 10); // Wed 21 Oct 2026, 10:00 UTC
 const iso = (ms: number) => new Date(ms).toISOString();
 let n = 0;
