@@ -1514,8 +1514,8 @@ export function createApp() {
   });
 
   // --- Reports ---
-  // Everyone uploads reports. Admins' reports are visible to everyone; others'
-  // only to their author and the global admins.
+  // Everyone uploads reports. Admins' reports and meeting summaries are visible
+  // to everyone; others' only to their author and the global admins.
 
   const REPORT_KINDS = ['journalier', 'hebdomadaire', 'mensuel', 'mission', 'reunion', 'autre'];
   const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);

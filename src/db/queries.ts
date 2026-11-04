@@ -2159,10 +2159,11 @@ export interface ReportFilters {
   sort?: 'recent' | 'oldest' | 'title' | 'author'; limit?: number; offset?: number;
 }
 
-// What a user may see: their own reports, every admin's report, and (admins) everything.
+// What a user may see: their own reports, every admin's report, every meeting
+// summary, and (admins) everything.
 function reportVisibility(viewer: { id: string; role: string }) {
   if (viewer.role === 'admin') return undefined;
-  return sql`(${schema.reports.user_id} = ${viewer.id} OR ${schema.users.role} = 'admin')`;
+  return sql`(${schema.reports.user_id} = ${viewer.id} OR ${schema.users.role} = 'admin' OR ${schema.reports.kind} = 'reunion')`;
 }
 
 // List without file_data: files are fetched one at a time on download.
@@ -2212,8 +2213,8 @@ export async function getReportAuthors(viewer: { id: string; role: string }) {
     .orderBy(u.name);
 }
 
-export async function canSeeReport(viewer: { id: string; role: string }, report: { user_id: string }) {
-  if (viewer.role === 'admin' || report.user_id === viewer.id) return true;
+export async function canSeeReport(viewer: { id: string; role: string }, report: { user_id: string; kind?: string | null }) {
+  if (viewer.role === 'admin' || report.user_id === viewer.id || report.kind === 'reunion') return true;
   const [author] = await db.select({ role: schema.users.role }).from(schema.users).where(eq(schema.users.id, report.user_id));
   return author?.role === 'admin';
 }

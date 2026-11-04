@@ -146,7 +146,7 @@ export const ReportsView: React.FC = () => {
             <FileText className="w-5 h-5 text-[#60A5FA]" /> Rapports
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            {isAdmin ? "Les rapports de toute l'équipe." : 'Tes rapports et ceux des admins. Word, Excel, PDF…, 3 Mo max.'}
+            {isAdmin ? "Les rapports de toute l'équipe." : 'Tes rapports, ceux des admins et tous les comptes rendus de réunion. Word, Excel, PDF…, 3 Mo max.'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 self-start sm:self-auto">
