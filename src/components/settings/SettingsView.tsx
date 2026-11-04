@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { useToast } from '../../context/ToastContext';
-import { SOUND_TYPES, SOUND_LABELS } from '../../lib/sound';
+import { SOUND_TYPES, SOUND_LABELS, getSoundSettings, setSoundSettings, playAlarmSound } from '../../lib/sound';
 import { api } from '../../lib/api';
 import { resizeImageToDataUrl } from '../../lib/image';
 import { WorkspaceMember, ProjectMember, Tag, WorkspaceRole, User as UserType, JobFunction, Project } from '../../types';
@@ -68,6 +68,7 @@ export const SettingsView: React.FC = () => {
     playTestSound
   } = useToast();
   const { confirmProps, confirm } = useConfirm();
+  const [soundVolume, setSoundVolume] = useState(() => getSoundSettings().volume);
 
   // Shows an inline success/error message, then clears it after 3s so it
   // never lingers on screen.
@@ -1825,6 +1826,25 @@ export const SettingsView: React.FC = () => {
                 </button>
               );
             })}
+          </div>
+
+          <div className={`flex flex-wrap items-center gap-3 pt-2 border-t border-[#1E293B] ${soundEnabled ? '' : 'opacity-50 pointer-events-none'}`}>
+            <label htmlFor="sound-volume" className="text-xs font-bold text-slate-200">Volume</label>
+            <input
+              id="sound-volume"
+              type="range" min={0} max={100} step={5}
+              value={Math.round(soundVolume * 100)}
+              onChange={e => { const v = Number(e.target.value) / 100; setSoundVolume(v); setSoundSettings({ volume: v }); }}
+              className="flex-1 min-w-32 accent-[#2563EB]"
+            />
+            <span className="text-xs text-slate-400 w-10 text-right">{Math.round(soundVolume * 100)} %</span>
+            <button
+              type="button"
+              onClick={playAlarmSound}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#1E293B] text-xs font-semibold text-slate-300 hover:border-[#334155]"
+            >
+              <Play className="w-3 h-3 text-[#3B82F6] fill-current" /> Tester l'alarme (3 s)
+            </button>
           </div>
         </div>
       )}

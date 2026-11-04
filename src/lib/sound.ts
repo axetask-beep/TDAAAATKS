@@ -65,13 +65,15 @@ if (typeof window !== 'undefined') {
   window.addEventListener('keydown', unlock);
 }
 
+const clampVolume = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1);
+
 export function getSoundSettings(): SoundConfig {
   if (typeof window === 'undefined') return { enabled: true, volume: 1.0, type: UNIFIED_NOTIFICATION_SOUND };
   const savedEnabled = localStorage.getItem(STORAGE_KEY_SOUND_ENABLED);
   const savedType = localStorage.getItem(STORAGE_KEY_SOUND_TYPE) as SoundEffectType | null;
   return {
     enabled: savedEnabled !== null ? savedEnabled === 'true' : true,
-    volume: 1.0, // always max: notifications must be loud
+    volume: clampVolume(Number(localStorage.getItem(STORAGE_KEY_SOUND_VOLUME) ?? 1)),
     type: savedType && VALID_SOUND_TYPES.includes(savedType) ? savedType : UNIFIED_NOTIFICATION_SOUND,
   };
 }
@@ -314,16 +316,17 @@ export function playPreferredNotificationSound(): string {
 
 /**
  * Overtime alarm: its own sound (not the user's preset), an insistent
- * two-tone beep-beep for 3 seconds. Muted by the same on/off switch.
+ * two-tone beep-beep for 3 seconds. Same on/off switch and volume as notifications.
  */
 export function playAlarmSound(): void {
-  if (!getSoundSettings().enabled) return;
+  const { enabled, volume } = getSoundSettings();
+  if (!enabled || volume <= 0) return;
   const ctx = getAudioContext();
   if (!ctx) return;
   try {
     const now = ctx.currentTime;
     const master = ctx.createGain();
-    master.gain.setValueAtTime(0.5, now);
+    master.gain.setValueAtTime(volume, now);
     master.connect(ctx.destination);
     // 15 beeps of 0.12 s every 0.2 s = 3 s, alternating high/low.
     for (let i = 0; i < 15; i++) {
