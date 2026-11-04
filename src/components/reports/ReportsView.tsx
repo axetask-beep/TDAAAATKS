@@ -2,13 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { api } from '../../lib/api';
-import { readFileAsDataUrl } from '../../lib/file';
+import { readFileAsDataUrl, downloadDataUrl, MAX_UPLOAD_BYTES as MAX_BYTES } from '../../lib/file';
 import { Report } from '../../types';
 import { ConfirmDialog, useConfirm } from '../common/ConfirmDialog';
 import { FileText, Upload, Download, Trash2 } from 'lucide-react';
-
-// The request goes through Vercel (4.5 Mo max, base64 adds a third), so 3 Mo per file.
-const MAX_BYTES = 3 * 1024 * 1024;
 
 function formatSize(bytes?: number | null) {
   if (!bytes) return '';
@@ -48,10 +45,7 @@ export const ReportsView: React.FC = () => {
   const onDownload = async (r: Report) => {
     try {
       const { file_name, file_data } = await api.getReportFile(r.id);
-      const a = document.createElement('a');
-      a.href = file_data;
-      a.download = file_name;
-      a.click();
+      await downloadDataUrl(file_data, file_name);
     } catch (err: any) {
       notify({ type: 'error', title: 'Téléchargement impossible', message: err.message, sound: false });
     }

@@ -8,6 +8,7 @@ import {
 } from '../src/lib/insights.ts';
 
 import { alertStage } from '../src/lib/chrono.ts';
+import { safeFileName } from '../src/lib/file.ts';
 
 // Chrono sound alerts: 5 min before, at the end, then every 15 min.
 {
@@ -18,6 +19,14 @@ import { alertStage } from '../src/lib/chrono.ts';
   assert.equal(alertStage(E, E + 14 * M), 1);
   assert.equal(alertStage(E, E + 15 * M), 2);
   assert.equal(alertStage(E, E + 31 * M), 3);
+}
+
+// File names from Android pickers ("document:123", no extension) must stay openable.
+{
+  const docx = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  assert.equal(safeFileName('document:1001085109', docx), 'document_1001085109.docx');
+  assert.equal(safeFileName('a.pdf', 'application/pdf'), 'a.pdf');
+  assert.equal(safeFileName('', null), 'fichier');
 }
 
 const NOW = Date.UTC(2026, 9, 21, 10); // Wed 21 Oct 2026, 10:00 UTC

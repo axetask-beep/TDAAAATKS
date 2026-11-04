@@ -9,7 +9,7 @@ import { Avatar } from '../common/Avatar';
 import { ChronoWidget } from '../common/ChronoWidget';
 import { CalendarPicker } from '../common/CalendarPicker';
 import { combineDateAndTime, splitISOToDateAndTime, isEndBeforeStart, DATE_ORDER_ERROR } from '../../lib/datetime';
-import { readFileAsDataUrl } from '../../lib/file';
+import { readFileAsDataUrl, downloadDataUrl, MAX_UPLOAD_BYTES } from '../../lib/file';
 
 // Grow a textarea to fit its content so long text is always fully readable.
 const autoGrow = (el: HTMLTextAreaElement | null) => {
@@ -299,7 +299,7 @@ export const TaskDetailDrawer: React.FC = () => {
     try {
       setIsUploadingFile(true);
       setAttachmentError('');
-      const dataUrl = await readFileAsDataUrl(file);
+      const dataUrl = await readFileAsDataUrl(file, MAX_UPLOAD_BYTES);
       await api.addAttachment(task.id, {
         file_name: file.name,
         file_url: dataUrl,
@@ -783,14 +783,25 @@ export const TaskDetailDrawer: React.FC = () => {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <a
-                              href={att.file_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1 text-slate-400 hover:text-[#3B82F6]"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
+                            {att.file_url.startsWith('data:') ? (
+                              <button
+                                onClick={() => downloadDataUrl(att.file_url, att.file_name).catch(() => setAttachmentError('Téléchargement impossible.'))}
+                                title="Télécharger"
+                                className="p-1 text-slate-400 hover:text-[#3B82F6]"
+                              >
+                                <Download className="w-3 h-3" />
+                              </button>
+                            ) : (
+                              <a
+                                href={att.file_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Ouvrir le lien"
+                                className="p-1 text-slate-400 hover:text-[#3B82F6]"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
                             <button
                               onClick={() => handleDeleteAttachment(att.id)}
                               className="p-1 text-slate-600 hover:text-rose-400"
