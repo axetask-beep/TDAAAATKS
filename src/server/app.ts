@@ -5,6 +5,8 @@ import * as db from '../db/queries.ts';
 import * as gamification from '../db/gamification.ts';
 import { User } from '../types.ts';
 import { DATE_ORDER_ERROR } from '../lib/datetime.ts';
+import { GoogleGenAI } from '@google/genai';
+import { SUMMARY_PROMPT, TRANSCRIBE_PROMPT, summarySchema } from '../lib/meetingReport.ts';
 
 // Resolved lazily (not at module load time) so a missing JWT_SECRET surfaces
 // as a normal per-request 500 error instead of crashing the whole serverless
@@ -1512,39 +1514,71 @@ export function createApp() {
   });
 
   // --- Reports ---
-  // Everyone uploads their own reports; global admins see and manage all of them.
+  // Everyone uploads reports. Admins' reports are visible to everyone; others'
+  // only to their author and the global admins.
+
+  const REPORT_KINDS = ['journalier', 'hebdomadaire', 'mensuel', 'mission', 'reunion', 'autre'];
+  const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
+  const isoDay = (v: unknown) => { const s = str(v); return s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undefined; };
 
   app.get('/api/reports', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    const q = req.query;
     try {
-      res.json(await db.getReports(req.user!.role === 'admin' ? null : req.user!.id));
+      res.json(await db.getReports(req.user!, {
+        q: str(q.q)?.slice(0, 200),
+        author: str(q.author),
+        kind: REPORT_KINDS.includes(q.kind as string) ? (q.kind as string) : undefined,
+        from: isoDay(q.from),
+        to: isoDay(q.to),
+        sort: ['recent', 'oldest', 'title', 'author'].includes(q.sort as string) ? (q.sort as any) : undefined,
+        limit: Number(q.limit) || undefined,
+        offset: Number(q.offset) || undefined,
+      }));
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Erreur lors de la récupération des rapports.' });
+    }
+  });
+
+  app.get('/api/reports/authors', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      res.json(await db.getReportAuthors(req.user!));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Erreur lors de la récupération des auteurs.' });
     }
   });
 
   app.get('/api/reports/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       const report = await db.getReportById(req.params.id);
-      if (!report || (report.user_id !== req.user!.id && req.user!.role !== 'admin')) {
+      if (!report || !(await db.canSeeReport(req.user!, report))) {
         return res.status(404).json({ error: 'Rapport introuvable.' });
       }
-      res.json({ file_name: report.file_name, file_data: report.file_data });
+      const author = await db.getUserById(report.user_id);
+      res.json({
+        title: report.title, kind: report.kind, file_name: report.file_name, file_data: report.file_data, content: report.content,
+        author_name: author?.name || null, created_at: report.created_at,
+      });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Erreur lors du téléchargement du rapport.' });
     }
   });
 
   app.post('/api/reports', authMiddleware, async (req: AuthenticatedRequest, res) => {
-    const { file_name, file_data, file_size, file_type } = req.body || {};
-    if (typeof file_name !== 'string' || !file_name.trim() || typeof file_data !== 'string' || !file_data.startsWith('data:')) {
+    const { file_name, file_data, file_size, file_type, title, kind, content } = req.body || {};
+    const hasFile = typeof file_data === 'string' && file_data.startsWith('data:');
+    const hasContent = content && typeof content === 'object';
+    if (typeof file_name !== 'string' || !file_name.trim() || (!hasFile && !hasContent)) {
       return res.status(400).json({ error: 'Fichier manquant ou invalide.' });
     }
     try {
       const report = await db.createReport(req.user!.id, {
         file_name: file_name.trim().slice(0, 255),
-        file_data,
+        file_data: hasFile ? file_data : null,
         file_size: Number.isFinite(file_size) ? file_size : undefined,
         file_type: typeof file_type === 'string' ? file_type.slice(0, 255) : undefined,
+        title: str(title)?.slice(0, 255),
+        kind: REPORT_KINDS.includes(kind) ? kind : undefined,
+        content: hasContent ? content : undefined,
       });
       res.status(201).json(report);
     } catch (err: any) {
@@ -1562,6 +1596,54 @@ export function createApp() {
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Erreur lors de la suppression du rapport.' });
+    }
+  });
+
+  // --- Meeting summaries (Gemini, free tier) ---
+  // The browser records the meeting in ~3 min pieces (Vercel caps a request at
+  // 4.5 Mo), each piece is transcribed as it comes, then the whole transcript is
+  // summarised in the AXE DIGITAL report template.
+
+  const gemini = () => {
+    if (!process.env.GEMINI_API_KEY) throw Object.assign(new Error("Résumé vocal indisponible : GEMINI_API_KEY n'est pas configurée sur le serveur."), { status: 503 });
+    return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  };
+  const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const aiError = (res: Response, err: any) => {
+    console.error('[meetings]', err);
+    const quota = /429|quota|RESOURCE_EXHAUSTED/i.test(String(err?.message));
+    res.status(err.status || (quota ? 429 : 502)).json({
+      error: err.status ? err.message : quota ? "Limite gratuite de l'IA atteinte, réessaie dans une minute." : "Le service d'IA n'a pas répondu, réessaie.",
+    });
+  };
+
+  app.post('/api/meetings/transcribe', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    const m = /^data:(audio\/[\w.+-]+)(?:;[^,]*)?;base64,(.+)$/s.exec(req.body?.audio || '');
+    if (!m) return res.status(400).json({ error: 'Audio manquant ou invalide.' });
+    try {
+      const r = await gemini().models.generateContent({
+        model: GEMINI_MODEL,
+        contents: [{ role: 'user', parts: [{ inlineData: { mimeType: m[1], data: m[2] } }, { text: TRANSCRIBE_PROMPT }] }],
+      });
+      const text = (r.text || '').trim();
+      res.json({ text: text === '(silence)' ? '' : text });
+    } catch (err: any) {
+      aiError(res, err);
+    }
+  });
+
+  app.post('/api/meetings/summarize', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    const transcript = typeof req.body?.transcript === 'string' ? req.body.transcript.trim() : '';
+    if (!transcript) return res.status(400).json({ error: "Rien n'a été entendu pendant l'enregistrement." });
+    try {
+      const r = await gemini().models.generateContent({
+        model: GEMINI_MODEL,
+        contents: [{ role: 'user', parts: [{ text: `${SUMMARY_PROMPT}\n\nDate : ${new Date().toLocaleDateString('fr-FR')}\n\nTRANSCRIPTION :\n${transcript.slice(0, 400_000)}` }] }],
+        config: { responseMimeType: 'application/json', responseJsonSchema: summarySchema() },
+      });
+      res.json({ summary: JSON.parse(r.text || '{}') });
+    } catch (err: any) {
+      aiError(res, err);
     }
   });
 

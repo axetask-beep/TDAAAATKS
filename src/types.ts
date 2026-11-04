@@ -271,13 +271,19 @@ export interface Announcement {
   author?: { id: string; name: string; avatar_url?: string | null } | null;
 }
 
+export type ReportKind = 'journalier' | 'hebdomadaire' | 'mensuel' | 'mission' | 'reunion' | 'autre';
+
 export interface Report {
   id: string;
+  title: string;
+  kind?: ReportKind | null;
   file_name: string;
   file_size?: number | null;
   file_type?: string | null;
+  has_file: boolean;
+  has_content: boolean; // meeting summary, shown in the app
   created_at: string;
-  author: { id: string; name: string };
+  author: { id: string; name: string; role?: string };
 }
 
 export interface AppNotification {

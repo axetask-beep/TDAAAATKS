@@ -276,13 +276,17 @@ export const jobFunctionsRelations = relations(jobFunctions, ({ many }) => ({
 export const reports = pgTable('reports', {
   id: text('id').primaryKey(),
   user_id: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title'), // null → file_name
+  kind: text('kind'), // journalier | hebdomadaire | mensuel | mission | reunion | autre
   file_name: text('file_name').notNull(),
-  file_data: text('file_data').notNull(),
+  file_data: text('file_data'), // null for a meeting summary (its text is in content)
   file_size: integer('file_size'),
   file_type: text('file_type'),
+  content: jsonb('content'), // meeting summary (sections of AXE_DIGITAL_Modele_Rapport) + transcript
   created_at: timestamp('created_at').defaultNow(),
 }, (t) => [
   index('reports_user_idx').on(t.user_id),
+  index('reports_created_idx').on(t.created_at),
 ]);
 
 export const announcementsRelations = relations(announcements, ({ one }) => ({

@@ -56,3 +56,14 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Meeting recorder backdrop: slow drifting aurora (off with reduced motion). */
+@keyframes aurora-drift {
+  0%, 100% { transform: translate(-10%, -6%) scale(1); }
+  50% { transform: translate(8%, 6%) scale(1.15); }
+}
+.aurora-blob { animation: aurora-drift 14s ease-in-out infinite; }
+.aurora-blob-slow { animation: aurora-drift 22s ease-in-out infinite reverse; }
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob, .aurora-blob-slow { animation: none; }
+}

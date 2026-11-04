@@ -9,6 +9,8 @@ import {
 
 import { alertStage } from '../src/lib/chrono.ts';
 import { safeFileName } from '../src/lib/file.ts';
+import { downsample, encodeWav, joinWavs } from '../src/lib/wav.ts';
+import { summarySchema, summaryText, SECTIONS } from '../src/lib/meetingReport.ts';
 
 // Chrono sound alerts: 5 min before, at the end, then every 15 min.
 {
@@ -27,6 +29,29 @@ import { safeFileName } from '../src/lib/file.ts';
   assert.equal(safeFileName('document:1001085109', docx), 'document_1001085109.docx');
   assert.equal(safeFileName('a.pdf', 'application/pdf'), 'a.pdf');
   assert.equal(safeFileName('', null), 'fichier');
+}
+
+// Meeting audio: 48 kHz → 16 kHz, valid WAV header, pieces join into one file.
+{
+  const d = downsample(new Float32Array(4800).fill(0.5), 48000);
+  assert.equal(d.length, 1600);
+  assert.ok(Math.abs(d[100] - 0.5) < 1e-6);
+  const w = encodeWav([d]);
+  assert.equal(new TextDecoder().decode(w.subarray(0, 4)), 'RIFF');
+  assert.equal(w.length, 44 + 1600 * 2);
+  const j = joinWavs([w, w]);
+  assert.equal(j.length, 44 + 3200 * 2);
+  assert.equal(new DataView(j.buffer).getUint32(40, true), 6400);
+  assert.equal(new DataView(j.buffer).getInt16(44 + 3199 * 2, true), new DataView(w.buffer).getInt16(44 + 1599 * 2, true));
+}
+
+// Meeting summary: schema covers every template section; empty parts say "Non abordé".
+{
+  const schema = summarySchema() as any;
+  for (const s of SECTIONS) assert.ok(schema.properties[s.key], s.key);
+  const t = summaryText({ summary: { resume: 'OK', plan_action: [{ action: 'Envoyer devis', responsable: 'Awa' }] }, transcript: '', duration_s: 0, recorded_at: '' });
+  assert.ok(t.includes('• Envoyer devis — Awa'));
+  assert.ok(t.includes('Non abordé'));
 }
 
 const NOW = Date.UTC(2026, 9, 21, 10); // Wed 21 Oct 2026, 10:00 UTC

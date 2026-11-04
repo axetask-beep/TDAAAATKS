@@ -2154,22 +2154,68 @@ export async function deleteAnnouncement(id: string): Promise<boolean> {
 
 // ----------------- REPORTS -----------------
 
+export interface ReportFilters {
+  q?: string; author?: string; kind?: string; from?: string; to?: string;
+  sort?: 'recent' | 'oldest' | 'title' | 'author'; limit?: number; offset?: number;
+}
+
+// What a user may see: their own reports, every admin's report, and (admins) everything.
+function reportVisibility(viewer: { id: string; role: string }) {
+  if (viewer.role === 'admin') return undefined;
+  return sql`(${schema.reports.user_id} = ${viewer.id} OR ${schema.users.role} = 'admin')`;
+}
+
 // List without file_data: files are fetched one at a time on download.
-// userId = null → everyone's reports (admins).
-export async function getReports(userId: string | null): Promise<Report[]> {
-  const r = schema.reports;
+export async function getReports(viewer: { id: string; role: string }, f: ReportFilters = {}): Promise<Report[]> {
+  const r = schema.reports, u = schema.users;
+  const where = [reportVisibility(viewer)];
+  if (f.q) {
+    const like = `%${f.q.replace(/[%_\\]/g, m => '\\' + m)}%`;
+    where.push(sql`(coalesce(${r.title}, ${r.file_name}) ILIKE ${like} OR ${r.file_name} ILIKE ${like} OR ${r.content}::text ILIKE ${like})`);
+  }
+  if (f.author) where.push(eq(r.user_id, f.author));
+  if (f.kind) where.push(f.kind === 'autre' ? sql`(${r.kind} IS NULL OR ${r.kind} = 'autre')` : eq(r.kind, f.kind));
+  if (f.from) where.push(sql`${r.created_at} >= ${f.from}::date`);
+  if (f.to) where.push(sql`${r.created_at} < ${f.to}::date + 1`);
+  const order = {
+    recent: [desc(r.created_at)],
+    oldest: [asc(r.created_at)],
+    title: [sql`lower(coalesce(${r.title}, ${r.file_name}))`, desc(r.created_at)],
+    author: [asc(u.name), desc(r.created_at)],
+  }[f.sort || 'recent'] || [desc(r.created_at)];
+
   const rows = await db.select({
-    id: r.id, file_name: r.file_name, file_size: r.file_size, file_type: r.file_type,
-    created_at: r.created_at, author_id: schema.users.id, author_name: schema.users.name,
+    id: r.id, title: r.title, kind: r.kind, file_name: r.file_name, file_size: r.file_size, file_type: r.file_type,
+    has_file: sql<boolean>`${r.file_data} IS NOT NULL`, has_content: sql<boolean>`${r.content} IS NOT NULL`,
+    created_at: r.created_at, author_id: u.id, author_name: u.name, author_role: u.role,
   }).from(r)
-    .innerJoin(schema.users, eq(schema.users.id, r.user_id))
-    .where(userId ? eq(r.user_id, userId) : undefined)
-    .orderBy(desc(r.created_at));
-  return rows.map(({ author_id, author_name, created_at, ...rest }) => ({
+    .innerJoin(u, eq(u.id, r.user_id))
+    .where(and(...where))
+    .orderBy(...(order as any[]))
+    .limit(Math.min(Math.max(f.limit || 50, 1), 200))
+    .offset(Math.max(f.offset || 0, 0));
+  return rows.map(({ author_id, author_name, author_role, created_at, title, ...rest }) => ({
     ...rest,
+    kind: rest.kind as Report["kind"],
+    title: title || rest.file_name.replace(/\.[a-z0-9]{2,5}$/i, ''),
     created_at: created_at?.toISOString() || new Date().toISOString(),
-    author: { id: author_id, name: author_name },
+    author: { id: author_id, name: author_name, role: author_role },
   }));
+}
+
+// People who wrote at least one report this viewer can see (for the author filter).
+export async function getReportAuthors(viewer: { id: string; role: string }) {
+  const r = schema.reports, u = schema.users;
+  return db.selectDistinct({ id: u.id, name: u.name }).from(r)
+    .innerJoin(u, eq(u.id, r.user_id))
+    .where(reportVisibility(viewer))
+    .orderBy(u.name);
+}
+
+export async function canSeeReport(viewer: { id: string; role: string }, report: { user_id: string }) {
+  if (viewer.role === 'admin' || report.user_id === viewer.id) return true;
+  const [author] = await db.select({ role: schema.users.role }).from(schema.users).where(eq(schema.users.id, report.user_id));
+  return author?.role === 'admin';
 }
 
 export async function getReportById(id: string) {
@@ -2177,10 +2223,14 @@ export async function getReportById(id: string) {
   return row || null;
 }
 
-export async function createReport(userId: string, data: { file_name: string; file_data: string; file_size?: number; file_type?: string }) {
+export async function createReport(userId: string, data: {
+  file_name: string; file_data?: string | null; file_size?: number; file_type?: string;
+  title?: string; kind?: string; content?: unknown;
+}) {
   const [row] = await db.insert(schema.reports).values({
-    id: crypto.randomUUID(), user_id: userId, file_name: data.file_name, file_data: data.file_data,
+    id: crypto.randomUUID(), user_id: userId, file_name: data.file_name, file_data: data.file_data ?? null,
     file_size: data.file_size ?? null, file_type: data.file_type ?? null,
+    title: data.title || null, kind: data.kind || null, content: data.content ?? null,
   }).returning({ id: schema.reports.id });
   return row;
 }

@@ -384,10 +384,23 @@ export const api = {
   },
 
   // Announcements
-  getReports: () => fetchWithAuth<Report[]>('/api/reports'),
-  getReportFile: (id: string) => fetchWithAuth<{ file_name: string; file_data: string }>(`/api/reports/${id}`),
-  uploadReport: (data: { file_name: string; file_data: string; file_size?: number; file_type?: string }) =>
+  // Filters: q, author, kind, from, to (YYYY-MM-DD), sort, limit, offset.
+  getReports: (filters: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]));
+    return fetchWithAuth<Report[]>(`/api/reports${qs.size ? `?${qs}` : ''}`);
+  },
+  getReportAuthors: () => fetchWithAuth<{ id: string; name: string }[]>('/api/reports/authors'),
+  getReportFile: (id: string) =>
+    fetchWithAuth<{ title: string | null; kind: string | null; file_name: string; file_data: string | null; content: any; author_name?: string | null; created_at?: string }>(`/api/reports/${id}`),
+  uploadReport: (data: {
+    file_name: string; file_data?: string; file_size?: number; file_type?: string;
+    title?: string; kind?: string; content?: unknown;
+  }) =>
     fetchWithAuth<{ id: string }>('/api/reports', { method: 'POST', body: JSON.stringify(data) }),
+  transcribeMeeting: (audio: string) =>
+    fetchWithAuth<{ text: string }>('/api/meetings/transcribe', { method: 'POST', body: JSON.stringify({ audio }) }),
+  summarizeMeeting: (transcript: string) =>
+    fetchWithAuth<{ summary: Record<string, any> }>('/api/meetings/summarize', { method: 'POST', body: JSON.stringify({ transcript }) }),
   deleteReport: (id: string) => fetchWithAuth<{ success: boolean }>(`/api/reports/${id}`, { method: 'DELETE' }),
 
   getAnnouncements: (search?: string) => {
