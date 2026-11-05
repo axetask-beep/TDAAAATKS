@@ -299,3 +299,28 @@ export interface AppNotification {
   task?: { id: string; title: string } | null;
   workspace?: { id: string; name: string } | null;
 }
+
+export interface DocumentItem {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_size?: number | null;
+  file_type?: string | null;
+  category: string;
+  created_at: string;
+  task_id: string;
+  task_title: string;
+  task_status: TaskStatus;
+  project_id: string;
+  project_name: string;
+  workspace_id: string;
+  workspace_name: string;
+  uploader_id: string;
+  uploader_name: string;
+}
+
+export interface DocumentFacets {
+  uploaders: { id: string; name: string }[];
+  workspaces: { id: string; name: string }[];
+  projects: { id: string; name: string; workspace_id: string }[];
+}

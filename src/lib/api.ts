@@ -8,6 +8,8 @@ import {
   Subtask,
   Comment,
   Attachment,
+  DocumentItem,
+  DocumentFacets,
   TimeEntry,
   Tag,
   TaskStatus,
@@ -392,6 +394,11 @@ export const api = {
     const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]));
     return fetchWithAuth<Report[]>(`/api/reports${qs.size ? `?${qs}` : ''}`);
   },
+  getDocuments: (filters: Record<string, string | number | undefined> = {}) => {
+    const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]));
+    return fetchWithAuth<DocumentItem[]>(`/api/documents${qs.size ? `?${qs}` : ''}`);
+  },
+  getDocumentFacets: () => fetchWithAuth<DocumentFacets>('/api/documents/facets'),
   getReportAuthors: () => fetchWithAuth<{ id: string; name: string }[]>('/api/reports/authors'),
   getReportFile: (id: string) =>
     fetchWithAuth<{ title: string | null; kind: string | null; file_name: string; file_data: string | null; content: any; author_name?: string | null; created_at?: string }>(`/api/reports/${id}`),

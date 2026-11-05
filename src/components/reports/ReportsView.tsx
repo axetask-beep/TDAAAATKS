@@ -20,7 +20,7 @@ export const REPORT_KINDS: Record<ReportKind, string> = {
 
 const PAGE = 50;
 
-function formatSize(bytes?: number | null) {
+export function formatSize(bytes?: number | null) {
   if (!bytes) return '';
   return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} Ko` : `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
 }
@@ -28,7 +28,7 @@ function formatSize(bytes?: number | null) {
 const day = (d: Date) => d.toLocaleDateString('sv-SE'); // YYYY-MM-DD, local time
 
 // Quick date ranges for the filter.
-function range(preset: string): { from?: string; to?: string } {
+export function range(preset: string): { from?: string; to?: string } {
   const now = new Date();
   if (preset === 'today') return { from: day(now), to: day(now) };
   if (preset === 'week') {
@@ -42,7 +42,7 @@ function range(preset: string): { from?: string; to?: string } {
 
 const EMPTY = { q: '', author: '', kind: '', from: '', to: '', sort: 'recent' };
 
-const input = 'px-2.5 py-1.5 rounded bg-[#090D16] border border-[#1E293B] text-xs text-slate-200 focus:border-[#2563EB] outline-none';
+export const input = 'px-2.5 py-1.5 rounded bg-[#090D16] border border-[#1E293B] text-xs text-slate-200 focus:border-[#2563EB] outline-none';
 
 export const ReportsView: React.FC = () => {
   const { user } = useAuth();

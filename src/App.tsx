@@ -23,6 +23,7 @@ import { BrandLogo } from './components/common/BrandLogo';
 import { CommandCenter } from './components/command/CommandCenter';
 import { ProgressView } from './components/progress/ProgressView';
 import { ReportsView } from './components/reports/ReportsView';
+import { DocumentsView } from './components/documents/DocumentsView';
 
 type NavigationTab =
   | 'command'
@@ -36,6 +37,7 @@ type NavigationTab =
   | 'messages'
   | 'announcements'
   | 'reports'
+  | 'documents'
   | 'activity'
   | 'settings';
 
@@ -153,6 +155,8 @@ function MainAppLayout() {
         {view === 'announcements' && <AnnouncementsView />}
 
         {view === 'reports' && <ReportsView />}
+
+        {view === 'documents' && <DocumentsView />}
 
         {view === 'activity' && user?.role === 'admin' && <ActivityLogView />}
 

@@ -1555,6 +1555,37 @@ export function createApp() {
     }
   });
 
+  // --- Documents: every file imported on a task (own files, or all for admins) ---
+  app.get('/api/documents', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    const q = req.query;
+    const pick = <T extends string>(v: unknown, list: readonly T[]) => (list.includes(v as T) ? (v as T) : undefined);
+    try {
+      res.json(await db.getDocuments(req.user!, {
+        q: str(q.q)?.slice(0, 200),
+        uploader: str(q.uploader),
+        category: pick(q.category, db.DOC_CATEGORIES),
+        workspace: str(q.workspace),
+        project: str(q.project),
+        status: pick(q.status, ['a_faire', 'en_cours', 'en_revision', 'termine', 'bloque'] as const),
+        from: isoDay(q.from),
+        to: isoDay(q.to),
+        sort: pick(q.sort, ['recent', 'oldest', 'name', 'size', 'uploader', 'task'] as const),
+        limit: Number(q.limit) || undefined,
+        offset: Number(q.offset) || undefined,
+      }));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Erreur lors de la récupération des documents.' });
+    }
+  });
+
+  app.get('/api/documents/facets', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      res.json(await db.getDocumentFacets(req.user!));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Erreur lors de la récupération des filtres.' });
+    }
+  });
+
   app.get('/api/reports/authors', authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       res.json(await db.getReportAuthors(req.user!));

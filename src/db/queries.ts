@@ -2734,3 +2734,94 @@ export async function searchEverything(userId: string, isGlobalAdmin: boolean, q
   ]);
   return { tasks, projects };
 }
+
+// ----------------- DOCUMENTS (files imported on tasks) -----------------
+// Members see the files they imported, global admins see everyone's.
+
+export const DOC_CATEGORIES = ['pdf', 'texte', 'tableur', 'presentation', 'image', 'media', 'archive', 'autre'] as const;
+
+const docCategorySql = (() => {
+  const a = schema.attachments;
+  const is = (mime: string, ext: string) => sql`(${a.file_type} ~* ${mime} OR ${a.file_name} ~* ${`\\.(${ext})$`})`;
+  return sql<string>`case
+    when ${is('pdf', 'pdf')} then 'pdf'
+    when ${is('wordprocessing|msword|opendocument\\.text|^text/plain|rtf', 'docx?|odt|rtf|txt|md')} then 'texte'
+    when ${is('spreadsheet|ms-excel|^text/csv', 'xlsx?|ods|csv')} then 'tableur'
+    when ${is('presentation|powerpoint', 'pptx?|odp')} then 'presentation'
+    when ${is('^image/', 'jpe?g|png|gif|webp|heic|svg')} then 'image'
+    when ${is('^(audio|video)/', 'mp3|m4a|wav|ogg|webm|mp4|mov')} then 'media'
+    when ${is('zip|rar|7z|tar|gzip', 'zip|rar|7z|tar|gz')} then 'archive'
+    else 'autre' end`;
+})();
+
+function documentScope(viewer: { id: string; role: string }) {
+  const a = schema.attachments;
+  return and(sql`${a.file_url} like 'data:%'`, viewer.role === 'admin' ? undefined : eq(a.user_id, viewer.id));
+}
+
+export type DocumentFilters = {
+  q?: string; uploader?: string; category?: string; workspace?: string; project?: string;
+  status?: string; from?: string; to?: string;
+  sort?: 'recent' | 'oldest' | 'name' | 'size' | 'uploader' | 'task'; limit?: number; offset?: number;
+};
+
+export async function getDocuments(viewer: { id: string; role: string }, f: DocumentFilters = {}) {
+  const a = schema.attachments, t = schema.tasks, p = schema.projects, w = schema.workspaces, u = schema.users;
+  const where = [documentScope(viewer)];
+  if (f.q) {
+    const like = `%${f.q.replace(/[%_\\]/g, m => '\\' + m)}%`;
+    where.push(sql`(${a.file_name} ILIKE ${like} OR ${t.title} ILIKE ${like} OR ${p.name} ILIKE ${like})`);
+  }
+  if (f.uploader) where.push(eq(a.user_id, f.uploader));
+  if (f.category) where.push(sql`${docCategorySql} = ${f.category}`);
+  if (f.workspace) where.push(eq(p.workspace_id, f.workspace));
+  if (f.project) where.push(eq(t.project_id, f.project));
+  if (f.status) where.push(eq(t.status, f.status));
+  if (f.from) where.push(sql`${a.created_at} >= ${f.from}::date`);
+  if (f.to) where.push(sql`${a.created_at} < ${f.to}::date + 1`);
+  const order = {
+    recent: [desc(a.created_at)],
+    oldest: [asc(a.created_at)],
+    name: [sql`lower(${a.file_name})`],
+    size: [sql`${a.file_size} desc nulls last`],
+    uploader: [asc(u.name), desc(a.created_at)],
+    task: [sql`lower(${t.title})`, desc(a.created_at)],
+  }[f.sort || 'recent'] || [desc(a.created_at)];
+
+  const rows = await db.select({
+    id: a.id, file_name: a.file_name, file_size: a.file_size, file_type: a.file_type, created_at: a.created_at,
+    category: docCategorySql,
+    task_id: t.id, task_title: t.title, task_status: t.status,
+    project_id: p.id, project_name: p.name, workspace_id: w.id, workspace_name: w.name,
+    uploader_id: u.id, uploader_name: u.name,
+  }).from(a)
+    .innerJoin(t, eq(t.id, a.task_id))
+    .innerJoin(p, eq(p.id, t.project_id))
+    .innerJoin(w, eq(w.id, p.workspace_id))
+    .innerJoin(u, eq(u.id, a.user_id))
+    .where(and(...where))
+    .orderBy(...(order as any[]))
+    .limit(Math.min(Math.max(f.limit || 50, 1), 200))
+    .offset(Math.max(f.offset || 0, 0));
+  return rows.map(r => ({ ...r, created_at: r.created_at?.toISOString() || new Date().toISOString(), file_url: `/api/attachments/${r.id}/file` }));
+}
+
+// Choices for the filter menus: only values that actually have documents.
+export async function getDocumentFacets(viewer: { id: string; role: string }) {
+  const a = schema.attachments, t = schema.tasks, p = schema.projects, w = schema.workspaces, u = schema.users;
+  const rows = await db.selectDistinct({
+    uploader_id: u.id, uploader_name: u.name, workspace_id: w.id, workspace_name: w.name, project_id: p.id, project_name: p.name,
+  }).from(a)
+    .innerJoin(t, eq(t.id, a.task_id))
+    .innerJoin(p, eq(p.id, t.project_id))
+    .innerJoin(w, eq(w.id, p.workspace_id))
+    .innerJoin(u, eq(u.id, a.user_id))
+    .where(documentScope(viewer));
+  const uniq = <T extends { id: string; name: string }>(list: T[]) =>
+    [...new Map(list.map(x => [x.id, x])).values()].sort((x, y) => x.name.localeCompare(y.name, 'fr'));
+  return {
+    uploaders: uniq(rows.map(r => ({ id: r.uploader_id, name: r.uploader_name }))),
+    workspaces: uniq(rows.map(r => ({ id: r.workspace_id, name: r.workspace_name }))),
+    projects: uniq(rows.map(r => ({ id: r.project_id, name: r.project_name, workspace_id: r.workspace_id }))),
+  };
+}
