@@ -1262,6 +1262,22 @@ export function createApp() {
     }
   });
 
+  // Stored file content, kept out of task payloads (see populateTasks).
+  app.get('/api/attachments/:id/file', authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const file = await db.getAttachmentFile(req.params.id);
+      if (!file) return res.status(404).json({ error: 'Pièce jointe introuvable.' });
+      const task = await db.getTaskById(file.task_id);
+      const isGlobalAdmin = req.user!.role === 'admin';
+      if (task?.workspace_id && !(await db.userCanAccessWorkspace(req.user!.id, task.workspace_id, isGlobalAdmin))) {
+        return res.status(403).json({ error: 'Accès refusé à cette pièce jointe.' });
+      }
+      res.json(file);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Erreur lors du téléchargement.' });
+    }
+  });
+
   app.delete('/api/attachments/:id', authMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
       const attachment = await db.getAttachmentById(req.params.id);

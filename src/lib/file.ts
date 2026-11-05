@@ -16,6 +16,15 @@ export function readFileAsDataUrl(file: File, maxBytes = 8 * 1024 * 1024): Promi
   });
 }
 
+// Photos are often bigger than the limit: shrink them instead of refusing them.
+export async function readUploadAsDataUrl(file: File): Promise<string> {
+  if (file.size > MAX_UPLOAD_BYTES && /^image\/(jpeg|png|webp)$/.test(file.type)) {
+    const { resizeImageToDataUrl } = await import('./image');
+    return resizeImageToDataUrl(file, 2400, 0.85);
+  }
+  return readFileAsDataUrl(file, MAX_UPLOAD_BYTES);
+}
+
 // Uploads go through Vercel (4.5 Mo per request, base64 adds a third): 3 Mo per file.
 export const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 

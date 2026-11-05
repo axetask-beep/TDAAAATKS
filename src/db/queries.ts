@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, inArray, ne, isNull, sql, ilike } from 'drizzle-orm';
+import { eq, and, desc, asc, inArray, ne, isNull, sql, ilike, getTableColumns } from 'drizzle-orm';
 import { db } from './index.ts';
 import * as schema from './schema.ts';
 import crypto from 'crypto';
@@ -1060,7 +1060,10 @@ async function populateTasks(rows: typeof schema.tasks.$inferSelect[]): Promise<
     db.select().from(schema.projects).where(inArray(schema.projects.id, prjIds)),
     db.select().from(schema.subtasks).where(inArray(schema.subtasks.task_id, ids)).orderBy(asc(schema.subtasks.created_at)),
     db.select().from(schema.comments).where(inArray(schema.comments.task_id, ids)).orderBy(desc(schema.comments.created_at)),
-    db.select().from(schema.attachments).where(inArray(schema.attachments.task_id, ids)).orderBy(desc(schema.attachments.created_at)),
+    // Stored files (data: URLs, up to ~4 Mo each) stay in the DB: shipping them in every
+    // task list blew past Vercel's 4.5 Mo response limit. Fetched on demand instead.
+    db.select({ ...getTableColumns(schema.attachments), file_url: storedFileUrlSql })
+      .from(schema.attachments).where(inArray(schema.attachments.task_id, ids)).orderBy(desc(schema.attachments.created_at)),
     db.select().from(schema.timeEntries).where(inArray(schema.timeEntries.task_id, ids)).orderBy(desc(schema.timeEntries.created_at)),
     db.select().from(schema.taskTags).where(inArray(schema.taskTags.task_id, ids)),
     getAllUsers(),
@@ -1556,6 +1559,16 @@ export async function deleteComment(id: string): Promise<boolean> {
 
 // ----------------- ATTACHMENTS -----------------
 
+// What clients get in file_url: links as-is, stored files as the URL to fetch them from.
+const storedFileUrlSql = sql<string>`case when ${schema.attachments.file_url} like 'data:%' then '/api/attachments/' || ${schema.attachments.id} || '/file' else ${schema.attachments.file_url} end`;
+const publicFileUrl = (id: string, url: string) => (url.startsWith('data:') ? `/api/attachments/${id}/file` : url);
+
+export async function getAttachmentFile(id: string): Promise<{ task_id: string; file_name: string; data_url: string } | null> {
+  const [row] = await db.select({ task_id: schema.attachments.task_id, file_name: schema.attachments.file_name, data_url: schema.attachments.file_url })
+    .from(schema.attachments).where(eq(schema.attachments.id, id)).limit(1);
+  return row || null;
+}
+
 export async function addAttachment(taskId: string, userId: string, fileName: string, fileUrl: string, fileSize?: number, fileType?: string): Promise<Attachment> {
   try {
     const id = generateId('att');
@@ -1575,7 +1588,7 @@ export async function addAttachment(taskId: string, userId: string, fileName: st
       id: created.id,
       task_id: created.task_id,
       file_name: created.file_name,
-      file_url: created.file_url,
+      file_url: publicFileUrl(created.id, created.file_url),
       file_size: created.file_size || undefined,
       file_type: created.file_type || undefined,
       uploaded_by: created.user_id,

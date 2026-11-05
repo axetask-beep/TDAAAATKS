@@ -301,6 +301,9 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  getAttachmentFile: (fileUrl: string) =>
+    fetchWithAuth<{ file_name: string; data_url: string }>(fileUrl),
+
   deleteAttachment: (attachmentId: string) =>
     fetchWithAuth<{ success: boolean }>(`/api/attachments/${attachmentId}`, {
       method: 'DELETE',

@@ -9,7 +9,7 @@ import { Avatar } from '../common/Avatar';
 import { ChronoWidget } from '../common/ChronoWidget';
 import { CalendarPicker } from '../common/CalendarPicker';
 import { combineDateAndTime, splitISOToDateAndTime, isEndBeforeStart, DATE_ORDER_ERROR } from '../../lib/datetime';
-import { readFileAsDataUrl, downloadDataUrl, MAX_UPLOAD_BYTES } from '../../lib/file';
+import { readUploadAsDataUrl, downloadDataUrl } from '../../lib/file';
 
 // Grow a textarea to fit its content so long text is always fully readable.
 const autoGrow = (el: HTMLTextAreaElement | null) => {
@@ -299,7 +299,7 @@ export const TaskDetailDrawer: React.FC = () => {
     try {
       setIsUploadingFile(true);
       setAttachmentError('');
-      const dataUrl = await readFileAsDataUrl(file, MAX_UPLOAD_BYTES);
+      const dataUrl = await readUploadAsDataUrl(file);
       await api.addAttachment(task.id, {
         file_name: file.name,
         file_url: dataUrl,
@@ -783,9 +783,9 @@ export const TaskDetailDrawer: React.FC = () => {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {att.file_url.startsWith('data:') ? (
+                            {att.file_url.startsWith('/api/') ? (
                               <button
-                                onClick={() => downloadDataUrl(att.file_url, att.file_name).catch(() => setAttachmentError('Téléchargement impossible.'))}
+                                onClick={() => api.getAttachmentFile(att.file_url).then(f => downloadDataUrl(f.data_url, f.file_name)).catch(() => setAttachmentError('Téléchargement impossible.'))}
                                 title="Télécharger"
                                 className="p-1 text-slate-400 hover:text-[#3B82F6]"
                               >
